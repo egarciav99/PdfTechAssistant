@@ -1,18 +1,34 @@
+/**
+ * Utility function to access environment variables safely.
+ * Since this is a Vite/Modern setup, we use import.meta.env.
+ * Throws an error if the variable is missing to fail fast and securely.
+ */
+const getEnv = (key: string): string => {
+  // Cast import.meta to any to fix "Property 'env' does not exist on type 'ImportMeta'" error
+  const value = (import.meta as any).env[key];
+  
+  if (value === undefined || value === '') {
+    // In production, you might want to log this to an error reporting service
+    throw new Error(`Missing environment variable: ${key}. Please check your .env file.`);
+  }
+  
+  return value;
+};
 
-// IMPORTANT: Replace with your actual Firebase project configuration.
-// This is example configuration and will not work.
+// Firebase Configuration
+// Values are retrieved from environment variables prefixed with VITE_
 export const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyDcUKnTuscsWqwqceXBNI2Rx8ZXg2Lh8Ug",
-  authDomain: "pdf-extract-41d23.firebaseapp.com",
-  projectId: "pdf-extract-41d23",
-  storageBucket: "pdf-extract-41d23.firebasestorage.app",
-  messagingSenderId: "750080586574",
-  appId: "1:750080586574:web:61b95e7c0c9161a4a2641f",
-  measurementId: "G-B013WTYD95"
+  apiKey: getEnv("VITE_FIREBASE_API_KEY"),
+  authDomain: getEnv("VITE_FIREBASE_AUTH_DOMAIN"),
+  projectId: getEnv("VITE_FIREBASE_PROJECT_ID"),
+  storageBucket: getEnv("VITE_FIREBASE_STORAGE_BUCKET"),
+  messagingSenderId: getEnv("VITE_FIREBASE_MESSAGING_SENDER_ID"),
+  appId: getEnv("VITE_FIREBASE_APP_ID"),
+  measurementId: getEnv("VITE_FIREBASE_MEASUREMENT_ID")
 };
 
 // Webhook for the flow that uploads, sanitizes, extracts, and returns a summary.
-export const N8N_INGESTION_URL = "https://egarciav.app.n8n.cloud/webhook/6491c2e2-939c-4f09-9bd3-36d941b42f59";
+export const N8N_INGESTION_URL = getEnv("VITE_N8N_INGESTION_URL");
 
 // Webhook for the chat flow with an AI agent.
-export const N8N_CHAT_URL = "https://egarciav.app.n8n.cloud/webhook/002efa79-8bd6-4e9c-bdf0-0c9667a8f55d";
+export const N8N_CHAT_URL = getEnv("VITE_N8N_CHAT_URL");
