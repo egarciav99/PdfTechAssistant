@@ -20,6 +20,7 @@ const App: React.FC = () => {
   const [userDocuments, setUserDocuments] = useState<DocumentItem[]>([]);
   const [activeDocument, setActiveDocument] = useState<DocumentItem | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatSessionId, setChatSessionId] = useState<number>(0);
   
   // Summary State (New)
   const [fetchedSummary, setFetchedSummary] = useState<string | null>(null);
@@ -152,6 +153,7 @@ const App: React.FC = () => {
   const handleSelectChat = (doc: DocumentItem) => {
     setActiveDocument(doc);
     setChatMessages([]); // Reset chat for new doc
+    setChatSessionId(Date.now()); // Create a numeric session ID for this chat instance
     setView('chat');
   };
 
@@ -200,7 +202,7 @@ const App: React.FC = () => {
       // Preparamos los datos requeridos por el webhook de n8n
       const payload = {
         query: query,
-        sessionId: activeDocument.storageId, 
+        sessionId: chatSessionId, // Numeric ID representing the current chat session
         fileName: activeDocument.storageId, 
         docId: activeDocument.id, 
         uid: currentUser.uid,
