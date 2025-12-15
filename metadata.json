@@ -1,0 +1,5 @@
+{
+  "name": "PDF Technical Assistant",
+  "description": "An interactive web application to upload technical PDF documents, receive an automated summary, and chat with an AI agent about the document's contents. Built with React, Firebase, and n8n.",
+  "requestFramePermissions": []
+}
