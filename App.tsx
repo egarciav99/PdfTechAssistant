@@ -277,9 +277,11 @@ const App: React.FC = () => {
     if (view === 'chat' && activeDocument) {
       return (
         <div>
-           <button onClick={handleBackToDashboard} className="mb-4 text-sm text-blue-600 hover:underline">← Back to Dashboard</button>
-           <div className="bg-blue-50 p-4 rounded-lg mb-4">
-             <h2 className="text-xl font-bold text-gray-800">{activeDocument.nombreDocumento}</h2>
+           <button onClick={handleBackToDashboard} className="mb-4 text-sm text-blue-600 hover:underline flex items-center gap-1">
+             <span>←</span> Back to Dashboard
+           </button>
+           <div className="bg-blue-50 p-3 sm:p-4 rounded-lg mb-4 border border-blue-100">
+             <h2 className="text-lg sm:text-xl font-bold text-gray-800 break-words">{activeDocument.nombreDocumento}</h2>
              <span className="text-xs text-gray-500">ID: {activeDocument.id}</span>
            </div>
            <ChatSection 
@@ -313,8 +315,10 @@ const App: React.FC = () => {
           } else {
               return (
                 <div>
-                    <button onClick={handleBackToDashboard} className="mb-4 text-sm text-blue-600 hover:underline">← Back to Dashboard</button>
-                    <div className="p-12 text-center bg-white rounded-lg border border-gray-200">
+                    <button onClick={handleBackToDashboard} className="mb-4 text-sm text-blue-600 hover:underline flex items-center gap-1">
+                        <span>←</span> Back to Dashboard
+                    </button>
+                    <div className="p-8 sm:p-12 text-center bg-white rounded-lg border border-gray-200">
                         <p className="text-gray-500 text-lg mb-4">Summary not ready yet.</p>
                         <p className="text-gray-400 text-sm mb-4">The AI is still processing this document or it hasn't been generated.</p>
                         <button 
@@ -331,9 +335,11 @@ const App: React.FC = () => {
 
       return (
         <div>
-           <button onClick={handleBackToDashboard} className="mb-4 text-sm text-blue-600 hover:underline">← Back to Dashboard</button>
-           <div className="mb-6">
-             <h2 className="text-xl font-bold text-gray-800 mb-1">{activeDocument.nombreDocumento}</h2>
+           <button onClick={handleBackToDashboard} className="mb-4 text-sm text-blue-600 hover:underline flex items-center gap-1">
+             <span>←</span> Back to Dashboard
+           </button>
+           <div className="mb-4 sm:mb-6">
+             <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-1 break-words">{activeDocument.nombreDocumento}</h2>
              <span className="text-xs text-gray-500">Uploaded: {new Date(activeDocument.createdAt).toLocaleString()}</span>
            </div>
            <SummarySection summary={summaryToRender} />
@@ -372,26 +378,26 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
         <header className="bg-white shadow-sm sticky top-0 z-10">
-            <div className="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div className="max-w-5xl mx-auto px-4 py-3 sm:py-4 flex justify-between items-center">
                 <div className="flex items-center gap-2 cursor-pointer" onClick={handleBackToDashboard}>
-                    <FileTextIcon className="w-8 h-8 text-blue-600" />
-                    <h1 className="text-xl font-bold text-gray-800 hidden sm:block">PDF Assistant</h1>
+                    <FileTextIcon className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
+                    <h1 className="text-lg sm:text-xl font-bold text-gray-800">PDF Assistant</h1>
                 </div>
                 <div className="flex items-center gap-4">
-                    <span className="text-sm text-gray-500 hidden sm:block">{currentUser.email}</span>
+                    <span className="text-sm text-gray-500 hidden md:block">{currentUser.email}</span>
                     <button 
                         onClick={handleSignOut}
                         className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm"
                     >
-                        <LogOutIcon className="w-4 h-4" />
+                        <LogOutIcon className="w-5 h-5 sm:w-4 sm:h-4" />
                         <span className="hidden sm:inline">Sign Out</span>
                     </button>
                 </div>
             </div>
         </header>
 
-        <main className="flex-grow w-full max-w-5xl mx-auto p-4 sm:p-6 md:p-8">
-            <div className={`bg-white rounded-xl shadow-lg p-6 md:p-8 min-h-[500px] transition-all ${view === 'dashboard' ? '' : 'ring-1 ring-black/5'}`}>
+        <main className="flex-grow w-full max-w-5xl mx-auto p-3 sm:p-6 md:p-8">
+            <div className={`bg-white rounded-xl shadow-lg p-4 sm:p-6 md:p-8 min-h-[500px] transition-all ${view === 'dashboard' ? '' : 'ring-1 ring-black/5'}`}>
                  {view === 'dashboard' && !selectedFile ? (
                      <DocumentList 
                         documents={userDocuments}
@@ -405,8 +411,8 @@ const App: React.FC = () => {
                  {view === 'dashboard' && selectedFile ? (
                       <div className="max-w-2xl mx-auto">
                         <div className="flex justify-between items-center mb-6">
-                             <h2 className="text-xl font-bold text-gray-800">Upload New Document</h2>
-                             <button onClick={() => setSelectedFile(null)} className="text-gray-400 hover:text-gray-600">✕ Cancel</button>
+                             <h2 className="text-lg sm:text-xl font-bold text-gray-800">Upload Document</h2>
+                             <button onClick={() => setSelectedFile(null)} className="text-gray-400 hover:text-gray-600 text-sm">✕ Cancel</button>
                         </div>
                         <UploadSection 
                             onFileSelect={(f) => handleFileSelect(f)}
@@ -421,7 +427,7 @@ const App: React.FC = () => {
             </div>
         </main>
 
-        <footer className="text-center py-6 text-gray-400 text-sm">
+        <footer className="text-center py-6 text-gray-400 text-xs sm:text-sm">
             <p>Powered by React, Firebase & n8n</p>
         </footer>
     </div>
