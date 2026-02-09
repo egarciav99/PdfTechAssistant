@@ -44,10 +44,8 @@ export const uploadFileToFirebase = async (file: File): Promise<string> => {
 
   try {
     await uploadBytes(storageRef, file);
-    console.log('Uploaded file to root:', storageName);
     return storageName;
   } catch (error) {
-    console.error("Error uploading file to Firebase Storage:", error);
     throw new Error("Could not upload file to storage. Check permissions.");
   }
 };
@@ -66,7 +64,7 @@ export const createUserDocument = async (uid: string) => {
       });
     }
   } catch (error) {
-    console.error("Error creating user document:", error);
+    // Silently fail - user doc creation is non-critical
   }
 };
 
@@ -105,10 +103,8 @@ export const getDocumentSummary = async (storageId: string): Promise<ResumenDocu
     } catch (error: any) {
         // Handle permissions error gracefully
         if (error.code === 'permission-denied') {
-            console.warn(`Permission denied accessing summary for ${storageId}. Please verify Firestore Rules for 'resumenes' collection allow reading IDs starting with UID.`);
             return null;
         }
-        console.error("Error fetching summary:", error);
         return null;
     }
 };
@@ -149,7 +145,6 @@ export const addNewDocumentToUser = async (uid: string, fileData: { name: string
         
         return newDocItem;
     } catch (error) {
-        console.error("Error adding new document to user:", error);
         throw error;
     }
 };
@@ -166,7 +161,7 @@ export const deleteUserDocument = async (uid: string, docId: string, storageId: 
     try {
       await deleteObject(fileRef);
     } catch (error) {
-      console.warn("Could not delete file from storage (might not exist):", error);
+      // File might not exist, continue
     }
     
     // 1.1 Delete separate Summary document if exists
@@ -174,7 +169,7 @@ export const deleteUserDocument = async (uid: string, docId: string, storageId: 
         const summaryRef = doc(db, 'resumenes', storageId);
         await deleteDoc(summaryRef);
     } catch (e) { 
-        console.warn("Could not delete summary document:", e);
+        // Summary might not exist, continue
     }
   }
 
@@ -192,7 +187,6 @@ export const deleteUserDocument = async (uid: string, docId: string, storageId: 
       });
     }
   } catch (error) {
-    console.error("Error deleting document reference:", error);
     throw error;
   }
 };

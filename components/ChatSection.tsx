@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 import type { ChatMessage } from '../types';
 import { SendIcon, UserIcon, BotIcon } from './IconComponents';
 
@@ -44,7 +45,7 @@ const ChatSection: React.FC<ChatSectionProps> = ({ documentId, messages, onSendM
                     /* Render HTML safely for bot messages */
                     <div 
                         className="prose prose-sm max-w-none break-words"
-                        dangerouslySetInnerHTML={{ __html: msg.text }}
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.text) }}
                     />
                 ) : (
                     <p className="break-words">{msg.text}</p>

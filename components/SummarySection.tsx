@@ -1,5 +1,6 @@
 
 import React from 'react';
+import DOMPurify from 'dompurify';
 import type { SummaryData } from '../types';
 import { ClipboardListIcon } from './IconComponents';
 
@@ -22,7 +23,7 @@ const SummarySection: React.FC<SummarySectionProps> = ({ summary }) => {
                {typeof value === 'string' ? (
                  <div 
                    className="prose prose-sm max-w-none text-gray-700 break-words overflow-x-auto" 
-                   dangerouslySetInnerHTML={{ __html: value }} 
+                   dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(value) }} 
                  />
                ) : (
                  <span className="break-words">{value}</span>
