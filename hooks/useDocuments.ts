@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { 
-  subscribeToUserDocuments, 
+  getUserDocuments,
   deleteUserDocument as firebaseDeleteDocument,
   uploadFileToFirebase,
   addNewDocumentToUser,
@@ -24,27 +24,22 @@ export const useDocuments = (userId: string | null): UseDocumentsReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Subscribe to user's documents
+  // Lectura puntual de los documentos del usuario (subcolección)
   useEffect(() => {
     if (!userId) {
       setDocuments([]);
       return;
     }
-
-    let unsubscribe: (() => void) | undefined;
-
-    try {
-      unsubscribe = subscribeToUserDocuments(userId, (docs) => {
-        const sorted = [...docs].sort((a, b) => b.createdAt - a.createdAt);
-        setDocuments(sorted);
+    setIsLoading(true);
+    getUserDocuments(userId)
+      .then((docs) => {
+        setDocuments(docs);
+        setIsLoading(false);
+      })
+      .catch(() => {
+        setError('Failed to fetch documents');
+        setIsLoading(false);
       });
-    } catch (err) {
-      setError('Failed to subscribe to documents');
-    }
-
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
   }, [userId]);
 
   const clearError = useCallback(() => setError(null), []);

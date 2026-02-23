@@ -8,7 +8,7 @@ import {
   signOut,
   onAuthStateChanged
 } from "firebase/auth";
-import { getFirestore, doc, setDoc, updateDoc, getDoc, deleteDoc, onSnapshot, arrayUnion } from "firebase/firestore";
+import { getFirestore, doc, setDoc, updateDoc, getDoc, deleteDoc, onSnapshot, arrayUnion, collection, addDoc, getDocs, query, orderBy, where, runTransaction } from "firebase/firestore";
 import { FIREBASE_CONFIG } from '../constants';
 import type { DocumentItem, ResumenDocument } from '../types';
 
@@ -59,9 +59,7 @@ export const createUserDocument = async (uid: string) => {
   try {
     const docSnap = await getDoc(userRef);
     if (!docSnap.exists()) {
-      await setDoc(userRef, {
-        documents: [], // Initialize as empty array
-      });
+      await setDoc(userRef, {}); // No array, just empty user doc
     }
   } catch (error) {
     // Silently fail - user doc creation is non-critical
@@ -69,18 +67,14 @@ export const createUserDocument = async (uid: string) => {
 };
 
 /**
- * Subscribes to the user's document changes in Firestore.
+ * Obtiene todos los documentos del usuario desde la subcolección 'documents'.
  */
-export const subscribeToUserDocuments = (uid: string, callback: (docs: DocumentItem[]) => void) => {
-  const userRef = doc(db, 'users', uid);
-  return onSnapshot(userRef, (docSnap) => {
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      callback(data.documents || []);
-    } else {
-      callback([]);
-    }
-  });
+export const getUserDocuments = async (uid: string): Promise<DocumentItem[]> => {
+  if (!uid) return [];
+  const docsCol = collection(db, 'users', uid, 'documents');
+  const q = query(docsCol, orderBy('createdAt', 'desc'));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as DocumentItem[];
 };
 
 /**
@@ -110,85 +104,53 @@ export const getDocumentSummary = async (storageId: string): Promise<ResumenDocu
 };
 
 /**
- * Adds a new document metadata to the user's Firestore document list.
- * Calculates the next ID (01, 02, etc.) based on existing length.
+ * Agrega un nuevo documento a la subcolección 'documents' del usuario.
  */
-export const addNewDocumentToUser = async (uid: string, fileData: { name: string, storageId: string }) => {
-    if (!uid) return;
-    const userRef = doc(db, 'users', uid);
-    
-    try {
-        const docSnap = await getDoc(userRef);
-        let currentDocs: DocumentItem[] = [];
-        
-        if (docSnap.exists()) {
-            currentDocs = docSnap.data().documents || [];
-        } else {
-            // Create doc if missing
-            await setDoc(userRef, { documents: [] });
-        }
-
-        // Calculate next ID
-        const nextIdNumber = currentDocs.length + 1;
-        const nextId = nextIdNumber.toString().padStart(2, '0');
-
-        const newDocItem: DocumentItem = {
-            id: nextId,
-            nombreDocumento: fileData.name,
-            storageId: fileData.storageId,
-            createdAt: Date.now(),
-        };
-
-        await updateDoc(userRef, {
-            documents: arrayUnion(newDocItem)
-        });
-        
-        return newDocItem;
-    } catch (error) {
-        throw error;
-    }
+  if (!uid) return;
+  const docsCol = collection(db, 'users', uid, 'documents');
+  const newDocItem: Omit<DocumentItem, 'id'> = {
+    nombreDocumento: fileData.name,
+    storageId: fileData.storageId,
+    createdAt: Date.now(),
+  };
+  // Usar transacción para asegurar consistencia
+  let docId = '';
+  await runTransaction(db, async (transaction) => {
+    const docRef = doc(docsCol);
+    transaction.set(docRef, newDocItem);
+    docId = docRef.id;
+  });
+  return { ...newDocItem, id: docId };
 };
 
 /**
- * Deletes a document from Firestore array, the file from Storage, and the summary from Firestore.
+ * Elimina un documento de la subcolección 'documents', el archivo de Storage y el resumen.
  */
 export const deleteUserDocument = async (uid: string, docId: string, storageId: string) => {
   if (!uid || !docId) return;
 
-  // 1. Delete from Storage
-  if (storageId) {
-    const fileRef = ref(storage, storageId);
-    try {
-      await deleteObject(fileRef);
-    } catch (error) {
-      // File might not exist, continue
-    }
-    
-    // 1.1 Delete separate Summary document if exists
-    try {
+  // Usar transacción para borrar el documento de Firestore y el resumen solo si el borrado de Storage fue exitoso
+  const docRef = doc(db, 'users', uid, 'documents', docId);
+  await runTransaction(db, async (transaction) => {
+    // 1. Delete from Storage (fuera de la transacción, pero si falla, aborta)
+    if (storageId) {
+      const fileRef = ref(storage, storageId);
+      try {
+        await deleteObject(fileRef);
+      } catch (error) {
+        throw new Error('No se pudo borrar el archivo de Storage');
+      }
+      // 1.1 Delete separate Summary document if exists
+      try {
         const summaryRef = doc(db, 'resumenes', storageId);
-        await deleteDoc(summaryRef);
-    } catch (e) { 
-        // Summary might not exist, continue
+        transaction.delete(summaryRef);
+      } catch (e) {
+        // Summary might not exist, continuar
+      }
     }
-  }
-
-  // 2. Remove from Firestore array (Users collection)
-  const userRef = doc(db, 'users', uid);
-  try {
-    const docSnap = await getDoc(userRef);
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      const currentDocs: DocumentItem[] = data.documents || [];
-      const updatedDocs = currentDocs.filter(d => d.id !== docId);
-      
-      await updateDoc(userRef, {
-        documents: updatedDocs
-      });
-    }
-  } catch (error) {
-    throw error;
-  }
+    // 2. Remove document from subcollection
+    transaction.delete(docRef);
+  });
 };
 
 export { 
