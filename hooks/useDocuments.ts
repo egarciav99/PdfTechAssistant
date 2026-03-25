@@ -6,7 +6,7 @@ import {
   addNewDocumentToUser,
   getDocumentSummary
 } from '../services/firebase';
-import { N8N_INGESTION_URL, FIREBASE_CONFIG } from '../constants';
+import { FIREBASE_CONFIG } from '../constants';
 import type { DocumentItem, ResumenDocument } from '../types';
 
 interface UseDocumentsReturn {
@@ -58,21 +58,8 @@ export const useDocuments = (userId: string | null): UseDocumentsReturn => {
         storageId: storageId,
       });
 
-      // 3. Trigger n8n ingestion (non-blocking)
-      if (newDoc) {
-        fetch(N8N_INGESTION_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            fileName: storageId,
-            bucketName: FIREBASE_CONFIG.storageBucket,
-            uid: uid,
-            docId: newDoc.id
-          }),
-        }).catch(() => {
-          // Silently fail - n8n will retry or admin will monitor
-        });
-      }
+      // 3. Document processing is now automatic via Firebase Storage trigger (processDocument.ts)
+      // No manual webhook call needed.
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Upload failed.';
       setError(message);

@@ -27,8 +27,8 @@ export const FIREBASE_CONFIG = {
   measurementId: getEnv("VITE_FIREBASE_MEASUREMENT_ID")
 };
 
-// Webhook for the flow that uploads, sanitizes, extracts, and returns a summary.
-export const N8N_INGESTION_URL = getEnv("VITE_N8N_INGESTION_URL");
+// Firebase Functions Configuration
+export const FIREBASE_FUNCTION_REGION = "us-central1";
 
-// Webhook for the chat flow with an AI agent.
-export const N8N_CHAT_URL = getEnv("VITE_N8N_CHAT_URL");
+// Chat function URL (deployed Cloud Run URL)
+export const CHAT_FUNCTION_URL = "https://chatwithdocument-cqaxuwwhba-uc.a.run.app";

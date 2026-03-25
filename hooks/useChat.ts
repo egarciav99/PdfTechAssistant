@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { N8N_CHAT_URL, FIREBASE_CONFIG } from '../constants';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '../services/firebase';
 import type { ChatMessage, DocumentItem } from '../types';
 
 interface UseChatReturn {
@@ -72,25 +73,16 @@ export const useChat = (): UseChatReturn => {
     try {
       const payload = {
         query: query,
-        sessionId: sessionId,
+        sessionId: sessionId.toString(),
         fileName: document.storageId,
         docId: document.id,
         uid: userId,
-        bucketName: FIREBASE_CONFIG.storageBucket
       };
 
-      const response = await fetch(N8N_CHAT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP Error: ${response.status}`);
-      }
-
-      const rawResult = await response.json();
-      const responseText = parseChatResponse(rawResult);
+      const chatWithDocument = httpsCallable(functions, 'chatWithDocument');
+      const response = await chatWithDocument(payload);
+      
+      const responseText = parseChatResponse(response.data);
 
       const botResponse: ChatMessage = { sender: 'bot', text: responseText };
       setMessages(prev => [...prev.slice(0, -1), botResponse]);

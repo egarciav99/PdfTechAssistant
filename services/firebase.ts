@@ -9,7 +9,8 @@ import {
   onAuthStateChanged
 } from "firebase/auth";
 import { getFirestore, doc, setDoc, updateDoc, getDoc, deleteDoc, onSnapshot, arrayUnion, collection, addDoc, getDocs, query, orderBy, where, runTransaction } from "firebase/firestore";
-import { FIREBASE_CONFIG } from '../constants';
+import { getFunctions } from "firebase/functions";
+import { FIREBASE_CONFIG, FIREBASE_FUNCTION_REGION } from '../constants';
 import type { DocumentItem, ResumenDocument } from '../types';
 
 // Initialize Firebase
@@ -19,6 +20,7 @@ const firebaseApp = initializeApp(FIREBASE_CONFIG);
 const storage = getStorage(firebaseApp);
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
+const functions = getFunctions(firebaseApp, FIREBASE_FUNCTION_REGION);
 
 /**
  * Uploads a file to Firebase Storage in the root bucket using a prefixed name.
@@ -106,6 +108,7 @@ export const getDocumentSummary = async (storageId: string): Promise<ResumenDocu
 /**
  * Agrega un nuevo documento a la subcolección 'documents' del usuario.
  */
+export const addNewDocumentToUser = async (uid: string, fileData: { name: string, storageId: string }) => {
   if (!uid) return;
   const docsCol = collection(db, 'users', uid, 'documents');
   const newDocItem: Omit<DocumentItem, 'id'> = {
@@ -156,6 +159,8 @@ export const deleteUserDocument = async (uid: string, docId: string, storageId: 
 export { 
   auth, 
   db, 
+  storage,
+  functions,
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
   signOut,

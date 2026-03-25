@@ -1,0 +1,228 @@
+{
+    "auth": {
+        "login": {
+            "title": "Welcome Back",
+            "emailLabel": "Email Address",
+            "emailPlaceholder": "you@example.com",
+            "passwordLabel": "Password",
+            "passwordPlaceholder": "••••••••",
+            "signInButton": "Sign In",
+            "signingIn": "Signing in...",
+            "noAccount": "Don't have an account?",
+            "createOne": "Create one",
+            "errorFillFields": "Please fill in both fields.",
+            "errorSignIn": "Error signing in. Please check your credentials."
+        },
+        "register": {
+            "title": "Create Your Account",
+            "emailLabel": "Email Address",
+            "emailPlaceholder": "you@example.com",
+            "passwordLabel": "Password",
+            "passwordPlaceholder": "6+ characters",
+            "passwordHint": "Must be at least 6 characters",
+            "createButton": "Create Account",
+            "creating": "Creating account...",
+            "haveAccount": "Already have an account?",
+            "signIn": "Sign in",
+            "errorPasswordLength": "Password must be at least 6 characters.",
+            "errorCreateAccount": "Error creating account. Email might already be in use.",
+            "termsAccept": "I accept the",
+            "termsLink": "Terms of Service",
+            "and": "and",
+            "privacyLink": "Privacy Policy",
+            "errorAcceptTerms": "You must accept the terms and privacy policy."
+        },
+        "features": {
+            "appTitle": "📄 PDF Technical Assistant",
+            "appDescription": "AI-powered document analysis for electrical engineering projects",
+            "uploadTitle": "Upload PDFs",
+            "uploadDescription": "Drag & drop technical documents for instant AI analysis. Supports files up to 50MB.",
+            "chatTitle": "AI Chat",
+            "chatDescription": "Ask questions and get instant answers from your documents. Understands technical terminology.",
+            "summaryTitle": "Smart Summaries",
+            "summaryDescription": "Get structured summaries of electrical specifications, materials, and requirements.",
+            "poweredBy": "✨ Powered by Google Gemini AI - Advanced language understanding for technical documents"
+        }
+    },
+    "header": {
+        "title": "PDF Assistant",
+        "signOut": "Sign Out"
+    },
+    "dashboard": {
+        "title": "My Documents",
+        "uploadButton": "Upload",
+        "emptyState": "No documents uploaded yet.",
+        "emptyStateHint": "Upload your first PDF to get started.",
+        "uploadNow": "Upload now"
+    },
+    "document": {
+        "summary": "Summary",
+        "summaryTooltip": "View AI-generated structured summary of electrical specifications",
+        "summaryHint": "(Quick overview)",
+        "chat": "Chat",
+        "chatTooltip": "Ask questions and get detailed answers from this document",
+        "chatHint": "(Ask anything)",
+        "confirmDelete": "Confirm?",
+        "id": "ID"
+    },
+    "upload": {
+        "title": "Upload Document",
+        "cancel": "Cancel",
+        "dragDrop": "Drag & drop a PDF file here",
+        "orClick": "or click to browse",
+        "uploadButton": "Upload and Analyze Document"
+    },
+    "uploadProgress": {
+        "title": "Processing Your Document",
+        "subtitle": "This usually takes 30-60 seconds",
+        "step1Label": "Uploading PDF",
+        "step1Description": "Transferring file to cloud storage",
+        "step2Label": "Extracting Text",
+        "step2Description": "Reading document content",
+        "step3Label": "Generating Embeddings",
+        "step3Description": "Creating AI vector representations",
+        "step4Label": "Creating Summary",
+        "step4Description": "Analyzing electrical specifications",
+        "tip": "💡 Tip: You can close this window and come back later. We'll notify you when processing is complete."
+    },
+    "chat": {
+        "title": "Document AI Chat",
+        "placeholder": "Ask a question...",
+        "emptyState": "Ask me anything about this document",
+        "tryAsking": "💡 Try asking:",
+        "suggestion1": "What are the main electrical specifications?",
+        "suggestion2": "List all materials mentioned",
+        "suggestion3": "What voltage levels are specified?",
+        "suggestion4": "Summarize the installation requirements"
+    },
+    "summary": {
+        "notReady": "Summary is not ready yet.",
+        "notReadyHint": "The AI is still processing this document or it hasn't been generated.",
+        "refresh": "Refresh",
+        "uploaded": "Uploaded"
+    },
+    "common": {
+        "backToDashboard": "Back to Dashboard",
+        "loading": "Loading...",
+        "initializing": "Initializing...",
+        "processing": "Processing...",
+        "fetchingSummary": "Fetching summary from database...",
+        "goBack": "Go Back"
+    },
+    "footer": {
+        "poweredBy": "Powered by React, Firebase and n8n",
+        "privacy": "Privacy",
+        "terms": "Terms"
+    },
+    "legal": {
+        "privacy": {
+            "title": "Privacy Policy",
+            "lastUpdated": "Last updated",
+            "intro": {
+                "title": "Introduction",
+                "content": "At PDF Technical Assistant, we are committed to protecting your privacy. This policy explains what data we collect, how we use it, and your rights regarding it."
+            },
+            "dataCollection": {
+                "title": "Data We Collect",
+                "intro": "We collect the following information:",
+                "item1": "Email address (for authentication)",
+                "item2": "PDF documents you upload",
+                "item3": "Text extracted from your PDFs",
+                "item4": "Vector representations (embeddings) of the content",
+                "item5": "Conversation history with the AI"
+            },
+            "dataUsage": {
+                "title": "How We Use Your Data",
+                "intro": "We use your data to:",
+                "item1": "Provide AI-powered document analysis services",
+                "item2": "Generate summaries and answer questions about your documents",
+                "item3": "Improve the accuracy and quality of our services",
+                "item4": "Maintain the security of your account"
+            },
+            "dataSharing": {
+                "title": "Data Sharing with Third Parties",
+                "intro": "We share data with the following service providers:",
+                "gemini": "We process your document content to generate summaries and answers",
+                "firebase": "Storage for authentication, files, and metadata",
+                "supabase": "Storage of vector embeddings for semantic search"
+            },
+            "dataSecurity": {
+                "title": "Data Security",
+                "content": "We implement technical and organizational security measures to protect your data against unauthorized access, loss, or alteration. This includes encryption in transit and at rest, secure authentication, and strict access controls."
+            },
+            "userRights": {
+                "title": "Your Rights",
+                "intro": "You have the right to:",
+                "access": "Access your personal data",
+                "rectification": "Correct inaccurate data",
+                "deletion": "Request deletion of your account and all your data",
+                "export": "Export your data in a readable format",
+                "objection": "Object to the processing of your data"
+            },
+            "dataRetention": {
+                "title": "Data Retention",
+                "content": "We retain your data while your account is active. If you delete your account, all your data will be permanently deleted from our systems within 30 days."
+            },
+            "contact": {
+                "title": "Contact",
+                "content": "If you have questions about this privacy policy or wish to exercise your rights, contact us through your account settings."
+            }
+        },
+        "terms": {
+            "title": "Terms of Service",
+            "lastUpdated": "Last updated",
+            "acceptance": {
+                "title": "Acceptance of Terms",
+                "content": "By using PDF Technical Assistant, you accept these terms of service. If you do not agree, do not use the service."
+            },
+            "service": {
+                "title": "Service Description",
+                "content": "PDF Technical Assistant is an AI-powered technical document analysis platform. It allows you to upload PDFs, generate automatic summaries, and ask questions about document content."
+            },
+            "obligations": {
+                "title": "User Obligations",
+                "intro": "By using the service, you agree to:",
+                "item1": "Provide accurate and up-to-date information",
+                "item2": "Maintain the security of your account",
+                "item3": "Not share your password with third parties",
+                "item4": "Use the service only for legitimate purposes",
+                "item5": "Respect intellectual property rights"
+            },
+            "prohibited": {
+                "title": "Prohibited Uses",
+                "intro": "The following are not permitted:",
+                "item1": "Uploading illegal, offensive content or content that infringes third-party rights",
+                "item2": "Attempting to access other users' accounts",
+                "item3": "Using the service to distribute malware or spam",
+                "item4": "Reverse engineering or attempting to compromise security"
+            },
+            "intellectual": {
+                "title": "Intellectual Property",
+                "content": "You retain all rights to the documents you upload. We retain rights to the software, design, and functionality of the platform."
+            },
+            "limitations": {
+                "title": "Service Limitations",
+                "intro": "The service is subject to the following limitations:",
+                "item1": "Maximum 50 documents per user",
+                "item2": "Maximum file size: 50MB",
+                "item3": "Total storage limit: 500MB per user"
+            },
+            "disclaimer": {
+                "title": "Disclaimer",
+                "content": "The service is provided 'as is' without warranties of any kind. We do not guarantee absolute accuracy of AI-generated summaries or answers. Users should verify critical information."
+            },
+            "termination": {
+                "title": "Termination",
+                "content": "We may suspend or terminate your access to the service if you violate these terms. You can delete your account at any time from settings."
+            },
+            "changes": {
+                "title": "Changes to Terms",
+                "content": "We reserve the right to modify these terms at any time. We will notify you of significant changes by email."
+            },
+            "contact": {
+                "title": "Contact",
+                "content": "For questions about these terms, contact us through your account settings."
+            }
+        }
+    }
+}

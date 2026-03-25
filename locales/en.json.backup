@@ -1,0 +1,109 @@
+{
+    "auth": {
+        "login": {
+            "title": "Welcome Back",
+            "emailLabel": "Email Address",
+            "emailPlaceholder": "you@example.com",
+            "passwordLabel": "Password",
+            "passwordPlaceholder": "••••••••",
+            "signInButton": "Sign In",
+            "signingIn": "Signing in...",
+            "noAccount": "Don't have an account?",
+            "createOne": "Create one",
+            "errorFillFields": "Please fill in both fields.",
+            "errorSignIn": "Failed to sign in. Please check your credentials."
+        },
+        "register": {
+            "title": "Create Your Account",
+            "emailLabel": "Email Address",
+            "emailPlaceholder": "you@example.com",
+            "passwordLabel": "Password",
+            "passwordPlaceholder": "6+ characters",
+            "passwordHint": "Must be at least 6 characters",
+            "createButton": "Create Account",
+            "creating": "Creating account...",
+            "haveAccount": "Already have an account?",
+            "signIn": "Sign in",
+            "errorPasswordLength": "Password should be at least 6 characters.",
+            "errorCreateAccount": "Failed to create an account. The email might already be in use."
+        },
+        "features": {
+            "appTitle": "📄 PDF Technical Assistant",
+            "appDescription": "AI-powered document analysis for electrical engineering projects",
+            "uploadTitle": "Upload PDFs",
+            "uploadDescription": "Drag & drop technical documents for instant AI analysis. Supports files up to 50MB.",
+            "chatTitle": "AI Chat",
+            "chatDescription": "Ask questions and get instant answers from your documents. Understands technical terminology.",
+            "summaryTitle": "Smart Summaries",
+            "summaryDescription": "Get structured summaries of electrical specifications, materials, and requirements.",
+            "poweredBy": "✨ Powered by Google Gemini AI - Advanced language understanding for technical documents"
+        }
+    },
+    "header": {
+        "title": "PDF Assistant",
+        "signOut": "Sign Out"
+    },
+    "dashboard": {
+        "title": "My Documents",
+        "uploadButton": "Upload",
+        "emptyState": "No documents uploaded yet.",
+        "emptyStateHint": "Upload your first PDF to get started.",
+        "uploadNow": "Upload now"
+    },
+    "document": {
+        "summary": "Summary",
+        "summaryTooltip": "View AI-generated structured summary of electrical specifications",
+        "summaryHint": "(Quick overview)",
+        "chat": "Chat",
+        "chatTooltip": "Ask questions and get detailed answers from this document",
+        "chatHint": "(Ask anything)",
+        "confirmDelete": "Confirm?",
+        "id": "ID"
+    },
+    "upload": {
+        "title": "Upload Document",
+        "cancel": "Cancel",
+        "dragDrop": "Drag & drop a PDF file here",
+        "orClick": "or click to browse",
+        "uploadButton": "Upload and Analyze Document"
+    },
+    "uploadProgress": {
+        "title": "Processing Your Document",
+        "subtitle": "This usually takes 30-60 seconds",
+        "step1Label": "Uploading PDF",
+        "step1Description": "Transferring file to cloud storage",
+        "step2Label": "Extracting Text",
+        "step2Description": "Reading document content",
+        "step3Label": "Generating Embeddings",
+        "step3Description": "Creating AI vector representations",
+        "step4Label": "Creating Summary",
+        "step4Description": "Analyzing electrical specifications",
+        "tip": "💡 Tip: You can close this window and come back later. We'll notify you when processing is complete."
+    },
+    "chat": {
+        "title": "Chat with Document AI",
+        "placeholder": "Ask a question...",
+        "emptyState": "Ask me anything about this document",
+        "tryAsking": "💡 Try asking:",
+        "suggestion1": "What are the main electrical specifications?",
+        "suggestion2": "List all the materials mentioned",
+        "suggestion3": "What voltage levels are specified?",
+        "suggestion4": "Summarize the installation requirements"
+    },
+    "summary": {
+        "notReady": "Summary not ready yet.",
+        "notReadyHint": "The AI is still processing this document or it hasn't been generated.",
+        "refresh": "Refresh",
+        "uploaded": "Uploaded"
+    },
+    "common": {
+        "backToDashboard": "Back to Dashboard",
+        "loading": "Loading...",
+        "initializing": "Initializing...",
+        "processing": "Processing...",
+        "fetchingSummary": "Fetching summary from database..."
+    },
+    "footer": {
+        "poweredBy": "Powered by React, Firebase & n8n"
+    }
+}

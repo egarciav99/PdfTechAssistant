@@ -1,0 +1,228 @@
+{
+    "auth": {
+        "login": {
+            "title": "Bienvenido de Nuevo",
+            "emailLabel": "Correo Electrónico",
+            "emailPlaceholder": "tu@ejemplo.com",
+            "passwordLabel": "Contraseña",
+            "passwordPlaceholder": "••••••••",
+            "signInButton": "Iniciar Sesión",
+            "signingIn": "Iniciando sesión...",
+            "noAccount": "¿No tienes una cuenta?",
+            "createOne": "Crear una",
+            "errorFillFields": "Por favor, completa ambos campos.",
+            "errorSignIn": "Error al iniciar sesión. Por favor, verifica tus credenciales."
+        },
+        "register": {
+            "title": "Crea tu Cuenta",
+            "emailLabel": "Correo Electrónico",
+            "emailPlaceholder": "tu@ejemplo.com",
+            "passwordLabel": "Contraseña",
+            "passwordPlaceholder": "6+ caracteres",
+            "passwordHint": "Debe tener al menos 6 caracteres",
+            "createButton": "Crear Cuenta",
+            "creating": "Creando cuenta...",
+            "haveAccount": "¿Ya tienes una cuenta?",
+            "signIn": "Iniciar sesión",
+            "errorPasswordLength": "La contraseña debe tener al menos 6 caracteres.",
+            "errorCreateAccount": "Error al crear la cuenta. El correo electrónico podría estar en uso.",
+            "termsAccept": "Acepto los",
+            "termsLink": "Términos de Servicio",
+            "and": "y la",
+            "privacyLink": "Política de Privacidad",
+            "errorAcceptTerms": "Debes aceptar los términos y la política de privacidad."
+        },
+        "features": {
+            "appTitle": "📄 Asistente Técnico PDF",
+            "appDescription": "Análisis de documentos con IA para proyectos de ingeniería eléctrica",
+            "uploadTitle": "Subir PDFs",
+            "uploadDescription": "Arrastra y suelta documentos técnicos para análisis instantáneo con IA. Soporta archivos de hasta 50MB.",
+            "chatTitle": "Chat con IA",
+            "chatDescription": "Haz preguntas y obtén respuestas instantáneas de tus documentos. Comprende terminología técnica.",
+            "summaryTitle": "Resúmenes Inteligentes",
+            "summaryDescription": "Obtén resúmenes estructurados de especificaciones eléctricas, materiales y requisitos.",
+            "poweredBy": "✨ Impulsado por Google Gemini AI - Comprensión avanzada del lenguaje para documentos técnicos"
+        }
+    },
+    "header": {
+        "title": "Asistente PDF",
+        "signOut": "Cerrar Sesión"
+    },
+    "dashboard": {
+        "title": "Mis Documentos",
+        "uploadButton": "Subir",
+        "emptyState": "Aún no hay documentos subidos.",
+        "emptyStateHint": "Sube tu primer PDF para comenzar.",
+        "uploadNow": "Subir ahora"
+    },
+    "document": {
+        "summary": "Resumen",
+        "summaryTooltip": "Ver resumen estructurado generado por IA de especificaciones eléctricas",
+        "summaryHint": "(Vista rápida)",
+        "chat": "Chat",
+        "chatTooltip": "Haz preguntas y obtén respuestas detalladas de este documento",
+        "chatHint": "(Pregunta lo que quieras)",
+        "confirmDelete": "¿Confirmar?",
+        "id": "ID"
+    },
+    "upload": {
+        "title": "Subir Documento",
+        "cancel": "Cancelar",
+        "dragDrop": "Arrastra y suelta un archivo PDF aquí",
+        "orClick": "o haz clic para explorar",
+        "uploadButton": "Subir y Analizar Documento"
+    },
+    "uploadProgress": {
+        "title": "Procesando tu Documento",
+        "subtitle": "Esto suele tardar 30-60 segundos",
+        "step1Label": "Subiendo PDF",
+        "step1Description": "Transfiriendo archivo al almacenamiento en la nube",
+        "step2Label": "Extrayendo Texto",
+        "step2Description": "Leyendo el contenido del documento",
+        "step3Label": "Generando Embeddings",
+        "step3Description": "Creando representaciones vectoriales con IA",
+        "step4Label": "Creando Resumen",
+        "step4Description": "Analizando especificaciones eléctricas",
+        "tip": "💡 Consejo: Puedes cerrar esta ventana y volver más tarde. Te notificaremos cuando el procesamiento esté completo."
+    },
+    "chat": {
+        "title": "Chat con IA del Documento",
+        "placeholder": "Haz una pregunta...",
+        "emptyState": "Pregúntame cualquier cosa sobre este documento",
+        "tryAsking": "💡 Intenta preguntar:",
+        "suggestion1": "¿Cuáles son las principales especificaciones eléctricas?",
+        "suggestion2": "Lista todos los materiales mencionados",
+        "suggestion3": "¿Qué niveles de voltaje se especifican?",
+        "suggestion4": "Resume los requisitos de instalación"
+    },
+    "summary": {
+        "notReady": "El resumen aún no está listo.",
+        "notReadyHint": "La IA todavía está procesando este documento o no se ha generado.",
+        "refresh": "Actualizar",
+        "uploaded": "Subido"
+    },
+    "common": {
+        "backToDashboard": "Volver al Panel",
+        "loading": "Cargando...",
+        "initializing": "Inicializando...",
+        "processing": "Procesando...",
+        "fetchingSummary": "Obteniendo resumen de la base de datos...",
+        "goBack": "Volver"
+    },
+    "footer": {
+        "poweredBy": "Impulsado por React, Firebase y n8n",
+        "privacy": "Privacidad",
+        "terms": "Términos"
+    },
+    "legal": {
+        "privacy": {
+            "title": "Política de Privacidad",
+            "lastUpdated": "Última actualización",
+            "intro": {
+                "title": "Introducción",
+                "content": "En PDF Technical Assistant, nos comprometemos a proteger tu privacidad. Esta política explica qué datos recopilamos, cómo los usamos y tus derechos sobre ellos."
+            },
+            "dataCollection": {
+                "title": "Datos que Recopilamos",
+                "intro": "Recopilamos la siguiente información:",
+                "item1": "Dirección de correo electrónico (para autenticación)",
+                "item2": "Documentos PDF que subes",
+                "item3": "Texto extraído de tus PDFs",
+                "item4": "Representaciones vectoriales (embeddings) del contenido",
+                "item5": "Historial de conversaciones con la IA"
+            },
+            "dataUsage": {
+                "title": "Cómo Usamos tus Datos",
+                "intro": "Utilizamos tus datos para:",
+                "item1": "Proporcionar servicios de análisis de documentos con IA",
+                "item2": "Generar resúmenes y responder preguntas sobre tus documentos",
+                "item3": "Mejorar la precisión y calidad de nuestros servicios",
+                "item4": "Mantener la seguridad de tu cuenta"
+            },
+            "dataSharing": {
+                "title": "Compartir Datos con Terceros",
+                "intro": "Compartimos datos con los siguientes proveedores de servicios:",
+                "gemini": "Procesamos el contenido de tus documentos para generar resúmenes y respuestas",
+                "firebase": "Almacenamiento de autenticación, archivos y metadatos",
+                "supabase": "Almacenamiento de embeddings vectoriales para búsqueda semántica"
+            },
+            "dataSecurity": {
+                "title": "Seguridad de Datos",
+                "content": "Implementamos medidas de seguridad técnicas y organizativas para proteger tus datos contra acceso no autorizado, pérdida o alteración. Esto incluye cifrado en tránsito y en reposo, autenticación segura y controles de acceso estrictos."
+            },
+            "userRights": {
+                "title": "Tus Derechos",
+                "intro": "Tienes derecho a:",
+                "access": "Acceder a tus datos personales",
+                "rectification": "Corregir datos inexactos",
+                "deletion": "Solicitar la eliminación de tu cuenta y todos tus datos",
+                "export": "Exportar tus datos en formato legible",
+                "objection": "Oponerte al procesamiento de tus datos"
+            },
+            "dataRetention": {
+                "title": "Retención de Datos",
+                "content": "Conservamos tus datos mientras tu cuenta esté activa. Si eliminas tu cuenta, todos tus datos se eliminarán permanentemente de nuestros sistemas en un plazo de 30 días."
+            },
+            "contact": {
+                "title": "Contacto",
+                "content": "Si tienes preguntas sobre esta política de privacidad o deseas ejercer tus derechos, contáctanos a través de la configuración de tu cuenta."
+            }
+        },
+        "terms": {
+            "title": "Términos de Servicio",
+            "lastUpdated": "Última actualización",
+            "acceptance": {
+                "title": "Aceptación de los Términos",
+                "content": "Al usar PDF Technical Assistant, aceptas estos términos de servicio. Si no estás de acuerdo, no uses el servicio."
+            },
+            "service": {
+                "title": "Descripción del Servicio",
+                "content": "PDF Technical Assistant es una plataforma de análisis de documentos técnicos con inteligencia artificial. Permite subir PDFs, generar resúmenes automáticos y hacer preguntas sobre el contenido de los documentos."
+            },
+            "obligations": {
+                "title": "Obligaciones del Usuario",
+                "intro": "Al usar el servicio, te comprometes a:",
+                "item1": "Proporcionar información precisa y actualizada",
+                "item2": "Mantener la seguridad de tu cuenta",
+                "item3": "No compartir tu contraseña con terceros",
+                "item4": "Usar el servicio solo para fines legítimos",
+                "item5": "Respetar los derechos de propiedad intelectual"
+            },
+            "prohibited": {
+                "title": "Usos Prohibidos",
+                "intro": "No está permitido:",
+                "item1": "Subir contenido ilegal, ofensivo o que infrinja derechos de terceros",
+                "item2": "Intentar acceder a cuentas de otros usuarios",
+                "item3": "Usar el servicio para distribuir malware o spam",
+                "item4": "Realizar ingeniería inversa o intentar comprometer la seguridad"
+            },
+            "intellectual": {
+                "title": "Propiedad Intelectual",
+                "content": "Tú conservas todos los derechos sobre los documentos que subes. Nosotros conservamos los derechos sobre el software, diseño y funcionalidad de la plataforma."
+            },
+            "limitations": {
+                "title": "Limitaciones del Servicio",
+                "intro": "El servicio está sujeto a las siguientes limitaciones:",
+                "item1": "Máximo 50 documentos por usuario",
+                "item2": "Tamaño máximo de archivo: 50MB",
+                "item3": "Límite de almacenamiento total: 500MB por usuario"
+            },
+            "disclaimer": {
+                "title": "Descargo de Responsabilidad",
+                "content": "El servicio se proporciona 'tal cual' sin garantías de ningún tipo. No garantizamos la precisión absoluta de los resúmenes o respuestas generadas por IA. Los usuarios deben verificar la información crítica."
+            },
+            "termination": {
+                "title": "Terminación",
+                "content": "Podemos suspender o terminar tu acceso al servicio si violas estos términos. Puedes eliminar tu cuenta en cualquier momento desde la configuración."
+            },
+            "changes": {
+                "title": "Cambios a los Términos",
+                "content": "Nos reservamos el derecho de modificar estos términos en cualquier momento. Te notificaremos sobre cambios significativos por correo electrónico."
+            },
+            "contact": {
+                "title": "Contacto",
+                "content": "Para preguntas sobre estos términos, contáctanos a través de la configuración de tu cuenta."
+            }
+        }
+    }
+}
