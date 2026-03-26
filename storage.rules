@@ -21,9 +21,12 @@ service firebase.storage {
       allow read: if isAuthenticated() && 
                      getFileOwnerUid(filename) == request.auth.uid;
       
-      // Allow write (upload) if authenticated and the filename starts with user's UID
+      // Allow write (upload) if authenticated, filename matches UID,
+      // file is a PDF, and file size is under 50MB
       allow write: if isAuthenticated() && 
-                      getFileOwnerUid(filename) == request.auth.uid;
+                      getFileOwnerUid(filename) == request.auth.uid &&
+                      request.resource.size < 50 * 1024 * 1024 &&
+                      request.resource.contentType == 'application/pdf';
       
       // Allow delete if authenticated and the filename starts with user's UID
       allow delete: if isAuthenticated() && 
@@ -31,4 +34,3 @@ service firebase.storage {
     }
   }
 }
-

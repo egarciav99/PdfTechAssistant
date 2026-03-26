@@ -64,7 +64,8 @@ export const createUserDocument = async (uid: string) => {
       await setDoc(userRef, {}); // No array, just empty user doc
     }
   } catch (error) {
-    // Silently fail - user doc creation is non-critical
+    console.error("Critical: Failed to create user document", error);
+    throw new Error('Failed to initialize user profile. Please try logging in again.');
   }
 };
 
@@ -132,28 +133,28 @@ export const addNewDocumentToUser = async (uid: string, fileData: { name: string
 export const deleteUserDocument = async (uid: string, docId: string, storageId: string) => {
   if (!uid || !docId) return;
 
-  // Usar transacción para borrar el documento de Firestore y el resumen solo si el borrado de Storage fue exitoso
   const docRef = doc(db, 'users', uid, 'documents', docId);
+
+  // 1. Delete Firestore records in a transaction (atomic, retryable)
   await runTransaction(db, async (transaction) => {
-    // 1. Delete from Storage (fuera de la transacción, pero si falla, aborta)
-    if (storageId) {
-      const fileRef = ref(storage, storageId);
-      try {
-        await deleteObject(fileRef);
-      } catch (error) {
-        throw new Error('No se pudo borrar el archivo de Storage');
-      }
-      // 1.1 Delete separate Summary document if exists
-      try {
-        const summaryRef = doc(db, 'resumenes', storageId);
-        transaction.delete(summaryRef);
-      } catch (e) {
-        // Summary might not exist, continuar
-      }
-    }
-    // 2. Remove document from subcollection
     transaction.delete(docRef);
+    if (storageId) {
+      const summaryRef = doc(db, 'resumenes', storageId);
+      transaction.delete(summaryRef);
+    }
   });
+
+  // 2. Delete from Storage AFTER Firestore succeeds (irreversible, done last)
+  if (storageId) {
+    const fileRef = ref(storage, storageId);
+    try {
+      await deleteObject(fileRef);
+    } catch (error) {
+      // Storage file may already be deleted or not exist — log but don't throw
+      // Firestore records are already cleaned up, which is the important part
+      console.warn('Storage delete failed (file may already be removed):', error);
+    }
+  }
 };
 
 export { 

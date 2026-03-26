@@ -58,8 +58,12 @@ export const useDocuments = (userId: string | null): UseDocumentsReturn => {
         storageId: storageId,
       });
 
-      // 3. Document processing is now automatic via Firebase Storage trigger (processDocument.ts)
-      // No manual webhook call needed.
+      // 3. Update local state immediately so the UI reflects the new document
+      if (newDoc) {
+        setDocuments(prev => [newDoc as DocumentItem, ...prev]);
+      }
+
+      // 4. Document processing is automatic via Firebase Storage trigger (processDocument.ts)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Upload failed.';
       setError(message);
@@ -72,6 +76,8 @@ export const useDocuments = (userId: string | null): UseDocumentsReturn => {
   const deleteDocument = useCallback(async (doc: DocumentItem, uid: string): Promise<void> => {
     try {
       await firebaseDeleteDocument(uid, doc.id, doc.storageId);
+      // Update local state immediately so the UI reflects the deletion
+      setDocuments(prev => prev.filter(d => d.id !== doc.id));
     } catch (err) {
       const message = 'Could not delete document. Please try again.';
       setError(message);

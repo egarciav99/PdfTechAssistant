@@ -66,16 +66,4 @@ export function cleanAndAnonymizeText(text: string): string {
   return cleanedText.trim();
 }
 
-/**
- * Get text cleaning statistics
- */
-export function getCleaningStats(originalText: string, cleanedText: string) {
-  return {
-    originalLength: originalText.length,
-    cleanedLength: cleanedText.length,
-    reductionPercentage: (
-      ((originalText.length - cleanedText.length) / originalText.length) * 100
-    ).toFixed(2),
-    processedAt: new Date().toISOString(),
-  };
-}
+

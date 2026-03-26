@@ -6,7 +6,11 @@ import {
   setCachedEmbedding,
 } from "./embeddingCache";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const apiKey = process.env.GEMINI_API_KEY;
+if (!apiKey) {
+  console.warn("WARNING: GEMINI_API_KEY is not defined in the environment.");
+}
+const genAI = new GoogleGenerativeAI(apiKey || "");
 
 // Rate limiter: 10 concurrent requests max
 const limiter = pLimit(10);
@@ -35,12 +39,19 @@ export async function generateEmbedding(text: string): Promise<number[]> {
       async () => {
         apiCalls++;
         const model = genAI.getGenerativeModel({model: "models/gemini-embedding-001"});
-        // Use any cast to allow outputDimensionality which is missing in current types
-        const result = await (model as any).embedContent({
-          // Force 768 dimensions to match Supabase vector column
+        // The outputDimensionality property exists in the API but is missing from
+        // the current version of the @google/generative-ai types
+        interface EmbedContentRequestWithDims {
+          content: { role: string, parts: { text: string }[] };
+          outputDimensionality?: number;
+        }
+        
+        const requestArgs: EmbedContentRequestWithDims = {
           content: {role: "user", parts: [{text: text}]},
           outputDimensionality: 768,
-        });
+        };
+        
+        const result = await (model as any).embedContent(requestArgs);
 
         const embedding = result.embedding.values;
 
@@ -166,29 +177,5 @@ export async function generateSummary(
   return finalSummary;
 }
 
-/**
- * Get API usage metrics
- */
-export function getApiMetrics() {
-  const total = cacheHits + cacheMisses;
-  const hitRate = total > 0 ? (cacheHits / total) * 100 : 0;
 
-  return {
-    cacheHits,
-    cacheMisses,
-    totalRequests: total,
-    cacheHitRate: hitRate.toFixed(2) + "%",
-    apiCalls,
-    apiCallsSaved: cacheHits,
-  };
-}
-
-/**
- * Reset metrics (useful for testing)
- */
-export function resetMetrics() {
-  cacheHits = 0;
-  cacheMisses = 0;
-  apiCalls = 0;
-}
 

@@ -14,8 +14,8 @@ interface CachedSearchResult {
  * Generate cache key from query embedding and fileName
  */
 function generateCacheKey(queryEmbedding: number[], fileName: string): string {
-  // Use first 10 values of embedding + fileName for cache key
-  const embeddingPrefix = queryEmbedding.slice(0, 10).join(",");
+  // Use first 50 values of embedding + fileName for cache key to prevent collision
+  const embeddingPrefix = queryEmbedding.slice(0, 50).join(",");
   const combined = `${fileName}:${embeddingPrefix}`;
   return createHash("sha256").update(combined).digest("hex");
 }
@@ -85,63 +85,4 @@ export async function setCachedSearch(
   }
 }
 
-/**
- * Clear all search cache entries for a specific document
- */
-export async function clearSearchCacheForDocument(fileName: string): Promise<number> {
-  try {
-    const db = admin.firestore();
-    const snapshot = await db.collection(CACHE_COLLECTION)
-      .where("fileName", "==", fileName)
-      .limit(100)
-      .get();
 
-    if (snapshot.empty) {
-      return 0;
-    }
-
-    const batch = db.batch();
-    snapshot.docs.forEach((doc) => {
-      batch.delete(doc.ref);
-    });
-
-    await batch.commit();
-    console.log(`Cleared ${snapshot.size} search cache entries for ${fileName}`);
-    return snapshot.size;
-  } catch (error) {
-    console.error("Error clearing search cache:", error);
-    return 0;
-  }
-}
-
-/**
- * Clear old search cache entries
- */
-export async function clearOldSearchCache(): Promise<number> {
-  try {
-    const db = admin.firestore();
-    const cutoffDate = new Date();
-    cutoffDate.setSeconds(cutoffDate.getSeconds() - CACHE_TTL_SECONDS);
-
-    const snapshot = await db.collection(CACHE_COLLECTION)
-      .where("timestamp", "<", cutoffDate)
-      .limit(500)
-      .get();
-
-    if (snapshot.empty) {
-      return 0;
-    }
-
-    const batch = db.batch();
-    snapshot.docs.forEach((doc) => {
-      batch.delete(doc.ref);
-    });
-
-    await batch.commit();
-    console.log(`Cleared ${snapshot.size} old search cache entries`);
-    return snapshot.size;
-  } catch (error) {
-    console.error("Error clearing old search cache:", error);
-    return 0;
-  }
-}

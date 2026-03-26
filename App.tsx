@@ -22,6 +22,7 @@ const App: React.FC = () => {
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   
   // UI State
+  const [showUploadView, setShowUploadView] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [authView, setAuthView] = useState<'login' | 'register'>('login');
 
@@ -29,26 +30,49 @@ const App: React.FC = () => {
   const { 
     currentUser, 
     isLoading: isAuthLoading, 
+    error: authError,
     login, 
     register, 
-    logout 
+    logout,
+    clearError: clearAuthError 
   } = useAuth();
   
   const { 
     documents, 
-    isLoading: isDocLoading, 
+    isLoading: isDocLoading,
+    error: docError,
     uploadDocument, 
     deleteDocument,
-    fetchSummary 
+    fetchSummary,
+    clearError: clearDocError 
   } = useDocuments(currentUser?.uid || null);
   
   const { 
     messages, 
+    isLoading: isChatLoading,
+    error: chatError,
     sendMessage, 
-    resetChat 
+    resetChat,
+    clearError: clearChatError
   } = useChat();
 
+  // Aggregate errors
+  const globalError = authError || docError || chatError;
+  const clearGlobalError = useCallback(() => {
+    if (authError) clearAuthError();
+    if (docError) clearDocError();
+    if (chatError) clearChatError();
+  }, [authError, docError, chatError, clearAuthError, clearDocError, clearChatError]);
+
   // --- Handlers ---
+  
+  const handleBackToDashboard = useCallback(() => {
+    setView('dashboard');
+    setActiveDocument(null);
+    setFetchedSummary(null);
+    setSelectedFile(null);
+    setShowUploadView(false);
+  }, []);
 
   const handleFileSelect = useCallback((file: File | null) => {
     setSelectedFile(file);
@@ -83,9 +107,9 @@ const App: React.FC = () => {
         handleBackToDashboard();
       }
     } catch (err) {
-      // Error handled in hook
+      // Error handled in hook and displayed by global error banner
     }
-  }, [currentUser, deleteDocument, activeDocument]);
+  }, [currentUser, deleteDocument, activeDocument, handleBackToDashboard]);
 
   const handleSelectChat = useCallback((doc: DocumentItem) => {
     setActiveDocument(doc);
@@ -109,12 +133,7 @@ const App: React.FC = () => {
     }
   }, [fetchSummary]);
 
-  const handleBackToDashboard = useCallback(() => {
-    setView('dashboard');
-    setActiveDocument(null);
-    setFetchedSummary(null);
-    setSelectedFile(null);
-  }, []);
+  // handleBackToDashboard moved up for dependency resolution
 
   const handleSendChatMessage = useCallback(async (query: string) => {
     if (!activeDocument || !currentUser) return;
@@ -236,13 +255,16 @@ const App: React.FC = () => {
     // Default: Dashboard
     if (isDocLoading) return <Loader text="Processing..." />;
     
-    if (view === 'dashboard' && selectedFile) {
+    if (view === 'dashboard' && showUploadView) {
       return (
         <div className="max-w-2xl mx-auto">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-lg sm:text-xl font-bold text-gray-800">Upload Document</h2>
             <button 
-              onClick={() => setSelectedFile(null)} 
+              onClick={() => {
+                setSelectedFile(null);
+                setShowUploadView(false);
+              }} 
               className="text-gray-400 hover:text-gray-600 text-sm"
             >
               ✕ Cancel
@@ -263,7 +285,7 @@ const App: React.FC = () => {
         documents={documents} 
         onSelectChat={handleSelectChat}
         onSelectSummary={handleSelectSummary}
-        onUploadNew={() => setSelectedFile({} as File)} 
+        onUploadNew={() => setShowUploadView(true)} 
         onDelete={handleDeleteDocument}
       />
     );
@@ -294,38 +316,24 @@ const App: React.FC = () => {
       </header>
 
       <main className="flex-grow w-full max-w-5xl mx-auto p-3 sm:p-6 md:p-8">
-        <div className={`bg-white rounded-xl shadow-lg p-4 sm:p-6 md:p-8 min-h-[500px] transition-all ${view === 'dashboard' ? '' : 'ring-1 ring-black/5'}`}>
-          {view === 'dashboard' && !selectedFile ? (
-            <DocumentList 
-              documents={documents}
-              onSelectChat={handleSelectChat}
-              onSelectSummary={handleSelectSummary}
-              onUploadNew={() => { setSelectedFile({} as File); }} 
-              onDelete={handleDeleteDocument}
-            />
-          ) : null}
-
-          {view === 'dashboard' && selectedFile ? (
-            <div className="max-w-2xl mx-auto">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg sm:text-xl font-bold text-gray-800">Upload Document</h2>
-                <button 
-                  onClick={() => setSelectedFile(null)} 
-                  className="text-gray-400 hover:text-gray-600 text-sm"
-                >
-                  ✕ Cancel
-                </button>
-              </div>
-              <UploadSection 
-                onFileSelect={handleFileSelect}
-                onUpload={handleStartUpload}
-                selectedFile={selectedFile instanceof File ? selectedFile : null}
-                error={null}
-              />
+        {globalError && (
+          <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg shadow-sm flex justify-between items-start">
+            <div className="flex items-center">
+              <span className="text-red-500 mr-2">⚠️</span>
+              <p className="text-sm text-red-700">{globalError}</p>
             </div>
-          ) : null}
-          
+            <button 
+              onClick={clearGlobalError}
+              className="text-red-400 hover:text-red-600 focus:outline-none"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+        
+        <div className={`bg-white rounded-xl shadow-lg p-4 sm:p-6 md:p-8 min-h-[500px] transition-all ${view === 'dashboard' ? '' : 'ring-1 ring-black/5'}`}>
           {view !== 'dashboard' && renderContent()}
+          {view === 'dashboard' && renderContent()}
         </div>
       </main>
 

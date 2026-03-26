@@ -38,22 +38,4 @@ export async function extractTextFromPDF(
   }
 }
 
-/**
- * Get PDF metadata including total pages
- */
-export async function getPDFMetadata(pdfBuffer: Buffer): Promise<{
-    pages: number;
-    filename?: string;
-}> {
-  try {
-    const options: PDFExtractOptions = {};
-    const data = await pdfExtract.extractBuffer(pdfBuffer, options);
 
-    return {
-      pages: data.pages.length,
-      filename: data.filename,
-    };
-  } catch (error) {
-    throw new Error(`Failed to get PDF metadata: ${error}`);
-  }
-}

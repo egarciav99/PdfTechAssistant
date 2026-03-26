@@ -46,6 +46,14 @@ export const chatWithDocument = onCall({
       );
     }
 
+    // SECURITY: Verify the document belongs to the authenticated user
+    if (!fileName.startsWith(uid + "_")) {
+      throw new HttpsError(
+        "permission-denied",
+        "You do not have permission to access this document."
+      );
+    }
+
     console.log(`Chat request from user ${uid} for document ${fileName}`);
 
     // 1. Generate embedding for user query
