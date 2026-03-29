@@ -39,7 +39,7 @@ export function segmentTextForRAG(
 
     // Detect section titles
     // Patterns like "1. Introduction", "4.1 Wiring", "3.2.1. Specifications"
-    const sectionMatch = trimmedSegment.match(/^(\d+(\.\d+)*)\.\?\s+/);
+    const sectionMatch = trimmedSegment.match(/^(\d+(\.\d+)*)\.?\s+/);
 
     if (sectionMatch) {
       // Update section title memory

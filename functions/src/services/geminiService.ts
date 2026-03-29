@@ -15,11 +15,6 @@ const genAI = new GoogleGenerativeAI(apiKey || "");
 // Rate limiter: 10 concurrent requests max
 const limiter = pLimit(10);
 
-// Metrics tracking
-let cacheHits = 0;
-let cacheMisses = 0;
-let apiCalls = 0;
-
 /**
  * Generate embeddings for text using Google Gemini with caching and rate limiting
  */
@@ -27,17 +22,13 @@ export async function generateEmbedding(text: string): Promise<number[]> {
   // 1. Check cache first
   const cached = await getCachedEmbedding(text);
   if (cached) {
-    cacheHits++;
     return cached;
   }
-
-  cacheMisses++;
 
   // 2. Rate-limited API call with retry logic
   return limiter(() =>
     pRetry(
       async () => {
-        apiCalls++;
         const model = genAI.getGenerativeModel({model: "models/gemini-embedding-001"});
         // The outputDimensionality property exists in the API but is missing from
         // the current version of the @google/generative-ai types
@@ -45,12 +36,11 @@ export async function generateEmbedding(text: string): Promise<number[]> {
           content: { role: string, parts: { text: string }[] };
           outputDimensionality?: number;
         }
-        
         const requestArgs: EmbedContentRequestWithDims = {
           content: {role: "user", parts: [{text: text}]},
           outputDimensionality: 768,
         };
-        
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const result = await (model as any).embedContent(requestArgs);
 
         const embedding = result.embedding.values;
@@ -87,9 +77,11 @@ export async function generateChatResponse(
   return limiter(() =>
     pRetry(
       async () => {
-        apiCalls++;
         const model = genAI.getGenerativeModel({
           model: "models/gemini-2.0-flash",
+          generationConfig: {
+            temperature: 0.1,
+          },
         });
 
         const prompt = `${systemPrompt}\n\nCONTEXTO:\n${context}\n\nPREGUNTA DEL USUARIO:\n${query}`;
@@ -131,7 +123,6 @@ export async function generateSummary(
     const summary = await limiter(() =>
       pRetry(
         async () => {
-          apiCalls++;
           const prompt = `Dame el resumen técnico del documento:\n${chunk}`;
           const result = await model.generateContent([
             {text: systemPrompt},
@@ -157,7 +148,6 @@ export async function generateSummary(
   const finalSummary = await limiter(() =>
     pRetry(
       async () => {
-        apiCalls++;
         const finalPrompt = `Dame el resumen técnico del documento:\n${combinedText}`;
         const finalResult = await model.generateContent([
           {text: systemPrompt},
@@ -176,6 +166,3 @@ export async function generateSummary(
 
   return finalSummary;
 }
-
-
-

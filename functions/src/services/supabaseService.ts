@@ -58,9 +58,9 @@ export async function searchSimilarDocuments(
   limit = 5
 ): Promise<Array<{ content: string; metadata: DocumentMetadata }>> {
   // 1. Check cache first
-  const cached = await getCachedSearch(queryEmbedding, fileName);
+  const cached = await getCachedSearch<DocumentMetadata>(queryEmbedding, fileName);
   if (cached) {
-    return cached as Array<{ content: string; metadata: DocumentMetadata }>;
+    return cached;
   }
 
   // 2. Query Supabase

@@ -14,7 +14,7 @@ export function cleanAndAnonymizeText(text: string): string {
 
   // Remove index lines (dots followed by numbers)
   // Example: "Introduction .................... 5"
-  cleanedText = cleanedText.replace(/^(.*?)[\.\s]{5,}\d+$/gm, "[LINEA_INDICE_ELIMINADA]");
+  cleanedText = cleanedText.replace(/^(.*?)[\s.]{5,}\d+$/gm, "[LINEA_INDICE_ELIMINADA]");
 
   // Remove isolated page numbers
   cleanedText = cleanedText.replace(/^\d+$/gm, "");

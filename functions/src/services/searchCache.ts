@@ -4,9 +4,9 @@ import {createHash} from "crypto";
 const CACHE_COLLECTION = "search_cache";
 const CACHE_TTL_SECONDS = 3600; // 1 hour
 
-interface CachedSearchResult {
+export interface CachedSearchResult<T = Record<string, unknown>> {
     content: string;
-    metadata: any;
+    metadata: T;
     similarity?: number;
 }
 
@@ -23,10 +23,10 @@ function generateCacheKey(queryEmbedding: number[], fileName: string): string {
 /**
  * Get cached search results
  */
-export async function getCachedSearch(
+export async function getCachedSearch<T = Record<string, unknown>>(
   queryEmbedding: number[],
   fileName: string
-): Promise<CachedSearchResult[] | null> {
+): Promise<CachedSearchResult<T>[] | null> {
   try {
     const cacheKey = generateCacheKey(queryEmbedding, fileName);
     const db = admin.firestore();
@@ -53,7 +53,7 @@ export async function getCachedSearch(
     }
 
     console.log(`Search cache HIT for ${fileName} (key: ${cacheKey.substring(0, 8)}...)`);
-    return data.results as CachedSearchResult[];
+    return data.results as CachedSearchResult<T>[];
   } catch (error) {
     console.error("Error getting cached search:", error);
     return null;
