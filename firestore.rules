@@ -50,8 +50,12 @@ service cloud.firestore {
       allow read: if isAuthenticated() && 
                      storageId.matches('^' + request.auth.uid + '_.*');
       
-      // Only Cloud Functions can write (no auth context)
-      allow write: if false;
+      // Allow delete if the storageId belongs to the user
+      allow delete: if isAuthenticated() && 
+                       storageId.matches('^' + request.auth.uid + '_.*');
+      
+      // Only Cloud Functions can create/update (no auth context)
+      allow create, update: if false;
     }
     
     // Embedding cache collection (used by Cloud Functions)
