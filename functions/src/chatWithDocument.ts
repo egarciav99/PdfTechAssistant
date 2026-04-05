@@ -63,23 +63,40 @@ export const chatWithDocument = onCall({
     const similarDocs = await searchSimilarDocuments(
       queryEmbedding,
       fileName,
-      5
+      8
     );
 
-    // 3. Build context from similar documents
+    // 3. Guard: if no relevant fragments found, return informative message
+    if (!similarDocs || similarDocs.length === 0) {
+      console.warn(`No similar fragments found for query in document: ${fileName}`);
+      return {
+        output: `<div style="padding: 15px; background-color: #fff7ed; color: #9a3412; border: 1px solid #fdba74; border-radius: 8px; font-family: Arial, sans-serif;">
+  <strong>⚠️ No se encontraron fragmentos relevantes</strong><br>
+  No encontré información relacionada con tu pregunta en la documentación cargada. Esto puede deberse a que:<br><br>
+  <ul style="margin: 8px 0 0 16px; padding: 0;">
+    <li>El documento aún se está procesando (espera unos minutos y reintenta)</li>
+    <li>El tema consultado no está cubierto en el archivo subido</li>
+    <li>Intenta reformular la pregunta usando términos más específicos del documento</li>
+  </ul>
+</div>`,
+        sessionId: sessionId,
+      };
+    }
+
+    // 4. Build context from similar documents
     const context = similarDocs
       .map((doc, index) => {
         return `[Fragmento ${index + 1} - ${doc.metadata.Titulo}]\n${doc.content}`;
       })
       .join("\n\n---\n\n");
 
-    // 4. Get chat history
+    // 5. Get chat history
     const history = await getChatHistory(sessionId, 10);
     const historyContext = history
       .map((msg) => `${msg.role === "user" ? "Usuario" : "Asistente"}: ${msg.content}`)
       .join("\n");
 
-    // 5. Build full context
+    // 6. Build full context
     const fullContext = `HISTORIAL DE CONVERSACIÓN:\n${historyContext}\n\n---\n\nDOCUMENTACIÓN RELEVANTE:\n${context}`;
 
     // 6. Generate response with Gemini

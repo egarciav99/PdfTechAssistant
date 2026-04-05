@@ -55,7 +55,7 @@ export async function storeDocumentChunks(
 export async function searchSimilarDocuments(
   queryEmbedding: number[],
   fileName: string,
-  limit = 5
+  limit = 8
 ): Promise<Array<{ content: string; metadata: DocumentMetadata }>> {
   // 1. Check cache first
   const cached = await getCachedSearch<DocumentMetadata>(queryEmbedding, fileName);
@@ -68,7 +68,7 @@ export async function searchSimilarDocuments(
   const {data, error} = await supabase
     .rpc("match_documents", {
       query_embedding: queryEmbedding,
-      match_threshold: 0.7,
+      match_threshold: 0.45,
       match_count: limit,
       filter: {Documento: fileName},
     });
