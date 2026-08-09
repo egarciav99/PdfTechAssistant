@@ -65,19 +65,34 @@ export async function searchSimilarDocuments(
 
   // 2. Query Supabase
   const supabase = getSupabaseClient();
-  const {data, error} = await supabase
-    .rpc("match_documents", {
+  const optimizedResponse = await supabase
+    .rpc("match_documents_optimized", {
       query_embedding: queryEmbedding,
       match_threshold: 0.45,
       match_count: limit,
-      filter: {Documento: fileName},
+      document_name: fileName,
     });
 
-  if (error) {
-    throw new Error(`Error searching documents: ${error.message}`);
+  if (optimizedResponse.error) {
+    const fallbackResponse = await supabase
+      .rpc("match_documents", {
+        query_embedding: queryEmbedding,
+        match_threshold: 0.45,
+        match_count: limit,
+        filter: {Documento: fileName},
+      });
+
+    if (fallbackResponse.error) {
+      throw new Error(`Error searching documents: ${fallbackResponse.error.message}`);
+    }
+
+    const fallbackResults = fallbackResponse.data || [];
+    await setCachedSearch(queryEmbedding, fileName, fallbackResults);
+
+    return fallbackResults;
   }
 
-  const results = data || [];
+  const results = optimizedResponse.data || [];
 
   // 3. Cache the results
   await setCachedSearch(queryEmbedding, fileName, results);
@@ -154,12 +169,12 @@ export async function getChatHistory(
     .from("chat_memory")
     .select("role, content")
     .eq("session_id", sessionId)
-    .order("created_at", {ascending: true})
+    .order("created_at", {ascending: false})
     .limit(limit);
 
   if (error) {
     throw new Error(`Error retrieving chat history: ${error.message}`);
   }
 
-  return data || [];
+  return (data || []).slice().reverse();
 }

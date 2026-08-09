@@ -1,11 +1,9 @@
 import {onCall, HttpsError} from "firebase-functions/v2/https";
-import {generateEmbedding, generateChatResponse} from "./services/geminiService";
+import {runChatAgent} from "./services/chatAgent";
 import {
-  searchSimilarDocuments,
   getChatHistory,
   storeChatMessage,
 } from "./services/supabaseService";
-import {CHAT_SYSTEM_PROMPT} from "./utils/prompts";
 
 interface ChatRequest {
   query: string;
@@ -26,7 +24,7 @@ export const chatWithDocument = onCall({
   // Removed minInstances to eliminate idle costs
   maxInstances: 100, // Scale up to 100 instances under load
   concurrency: 80, // Each instance handles 80 concurrent requests
-}, async (request) => {
+}, async (request: {auth?: {uid: string} | null; data: ChatRequest}) => {
   // 1. Verify Authentication
   if (!request.auth) {
     throw new HttpsError(
@@ -56,61 +54,22 @@ export const chatWithDocument = onCall({
 
     console.log(`Chat request from user ${uid} for document ${fileName}`);
 
-    // 1. Generate embedding for user query
-    const queryEmbedding = await generateEmbedding(query);
-
-    // 2. Search for similar documents in vector store
-    const similarDocs = await searchSimilarDocuments(
-      queryEmbedding,
-      fileName,
-      8
-    );
-
-    // 3. Guard: if no relevant fragments found, return informative message
-    if (!similarDocs || similarDocs.length === 0) {
-      console.warn(`No similar fragments found for query in document: ${fileName}`);
-      return {
-        output: `<div style="padding: 15px; background-color: #fff7ed; color: #9a3412; border: 1px solid #fdba74; border-radius: 8px; font-family: Arial, sans-serif;">
-  <strong>⚠️ No se encontraron fragmentos relevantes</strong><br>
-  No encontré información relacionada con tu pregunta en la documentación cargada. Esto puede deberse a que:<br><br>
-  <ul style="margin: 8px 0 0 16px; padding: 0;">
-    <li>El documento aún se está procesando (espera unos minutos y reintenta)</li>
-    <li>El tema consultado no está cubierto en el archivo subido</li>
-    <li>Intenta reformular la pregunta usando términos más específicos del documento</li>
-  </ul>
-</div>`,
-        sessionId: sessionId,
-      };
-    }
-
-    // 4. Build context from similar documents
-    const context = similarDocs
-      .map((doc, index) => {
-        return `[Fragmento ${index + 1} - ${doc.metadata.Titulo}]\n${doc.content}`;
-      })
-      .join("\n\n---\n\n");
-
-    // 5. Get chat history
+    // 1. Get chat history
     const history = await getChatHistory(sessionId, 10);
-    const historyContext = history
-      .map((msg) => `${msg.role === "user" ? "Usuario" : "Asistente"}: ${msg.content}`)
-      .join("\n");
 
-    // 6. Build full context
-    const fullContext = `HISTORIAL DE CONVERSACIÓN:\n${historyContext}\n\n---\n\nDOCUMENTACIÓN RELEVANTE:\n${context}`;
-
-    // 6. Generate response with Gemini
-    const response = await generateChatResponse(
+    // 2. Run agent with function calling and strict document grounding
+    const response = await runChatAgent({
       query,
-      fullContext,
-      CHAT_SYSTEM_PROMPT
-    );
+      sessionId,
+      fileName,
+      history,
+    });
 
-    // 7. Store messages in chat memory
+    // 3. Store messages in chat memory
     await storeChatMessage(sessionId, "user", query);
     await storeChatMessage(sessionId, "assistant", response);
 
-    // 8. Return response
+    // 4. Return response
     return {
       output: response,
       sessionId: sessionId,

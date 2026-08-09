@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../services/firebase';
 import type { ChatMessage, DocumentItem } from '../types';
@@ -12,6 +12,24 @@ interface UseChatReturn {
   resetChat: () => void;
   clearError: () => void;
 }
+
+const CHAT_SESSION_STORAGE_PREFIX = 'pdftechassistant.chatSession';
+
+const createSessionId = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
+const buildConversationStorageKey = (userId: string | null, documentId: string | null): string | null => {
+  if (!userId || !documentId) {
+    return null;
+  }
+
+  return `${CHAT_SESSION_STORAGE_PREFIX}:${userId}:${documentId}`;
+};
 
 const parseChatResponse = (rawResult: unknown): string => {
   if (Array.isArray(rawResult) && rawResult.length > 0) {
@@ -34,20 +52,75 @@ const parseChatResponse = (rawResult: unknown): string => {
   return 'No response from AI.';
 };
 
-export const useChat = (): UseChatReturn => {
+export const useChat = (userId: string | null = null, documentId: string | null = null): UseChatReturn => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sessionId, setSessionId] = useState<string>(Date.now().toString());
+  const [sessionId, setSessionId] = useState<string>(() => createSessionId());
 
   const lastMessageTimeRef = useRef<number>(0);
+  const activeStorageKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    setMessages([]);
+    setError(null);
+
+    const storageKey = buildConversationStorageKey(userId, documentId);
+    activeStorageKeyRef.current = storageKey;
+
+    if (!storageKey || typeof window === 'undefined') {
+      setSessionId(createSessionId());
+      return;
+    }
+
+    const storedSessionId = window.localStorage.getItem(storageKey);
+    if (storedSessionId) {
+      setSessionId(storedSessionId);
+      return;
+    }
+
+    const newSessionId = `${userId}:${documentId}:${createSessionId()}`;
+    window.localStorage.setItem(storageKey, newSessionId);
+    setSessionId(newSessionId);
+  }, [userId, documentId]);
 
   const clearError = useCallback(() => setError(null), []);
 
   const resetChat = useCallback(() => {
     setMessages([]);
-    setSessionId(Date.now().toString());
     setError(null);
+
+    const storageKey = activeStorageKeyRef.current;
+    const newSessionId = createSessionId();
+
+    if (storageKey && typeof window !== 'undefined') {
+      window.localStorage.setItem(storageKey, newSessionId);
+    }
+
+    setSessionId(newSessionId);
+  }, []);
+
+  const ensureSessionId = useCallback((conversationUserId: string, conversationDocumentId: string) => {
+    const storageKey = buildConversationStorageKey(conversationUserId, conversationDocumentId);
+
+    if (!storageKey || typeof window === 'undefined') {
+      const transientSessionId = `${conversationUserId}:${conversationDocumentId}:${createSessionId()}`;
+      setSessionId(transientSessionId);
+      return transientSessionId;
+    }
+
+    activeStorageKeyRef.current = storageKey;
+
+    const storedSessionId = window.localStorage.getItem(storageKey);
+    if (storedSessionId) {
+      setSessionId(storedSessionId);
+      return storedSessionId;
+    }
+
+    const newSessionId = `${conversationUserId}:${conversationDocumentId}:${createSessionId()}`;
+    window.localStorage.setItem(storageKey, newSessionId);
+    setSessionId(newSessionId);
+    return newSessionId;
   }, []);
 
   const sendMessage = useCallback(async (
@@ -67,6 +140,8 @@ export const useChat = (): UseChatReturn => {
     setIsLoading(true);
     setError(null);
 
+    const conversationSessionId = ensureSessionId(userId, document.storageId);
+
     const userMessage: ChatMessage = { sender: 'user', text: text };
     setMessages(prev => [...prev, userMessage]);
 
@@ -76,7 +151,7 @@ export const useChat = (): UseChatReturn => {
     try {
       const payload = {
         query: text,
-        sessionId: sessionId,
+        sessionId: conversationSessionId,
         fileName: document.storageId,
         docId: document.id,
         uid: userId,
@@ -102,7 +177,7 @@ export const useChat = (): UseChatReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [sessionId]);
+  }, [ensureSessionId]);
 
   return {
     messages,

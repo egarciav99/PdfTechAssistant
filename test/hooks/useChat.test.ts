@@ -42,7 +42,7 @@ describe('useChat', () => {
 
     expect(result.current.messages).toEqual([]);
     expect(result.current.error).toBeNull();
-    expect(result.current.sessionId).toBeGreaterThan(0);
+    expect(result.current.sessionId).toContain('-');
   });
 
   it('should clear error', () => {

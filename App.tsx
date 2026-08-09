@@ -52,9 +52,8 @@ const App: React.FC = () => {
     isLoading: isChatLoading,
     error: chatError,
     sendMessage, 
-    resetChat,
     clearError: clearChatError
-  } = useChat();
+  } = useChat(currentUser?.uid || null, activeDocument?.storageId || null);
 
   // Aggregate errors
   const globalError = authError || docError || chatError;
@@ -113,9 +112,8 @@ const App: React.FC = () => {
 
   const handleSelectChat = useCallback((doc: DocumentItem) => {
     setActiveDocument(doc);
-    resetChat();
     setView('chat');
-  }, [resetChat]);
+  }, []);
 
   const handleSelectSummary = useCallback(async (doc: DocumentItem) => {
     setActiveDocument(doc);
