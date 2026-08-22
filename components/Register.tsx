@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { createUserWithEmailAndPassword, createUserDocument } from '../services/supabase';
+import { createUserWithEmailAndPassword } from '../services/supabase';
 import { FileTextIcon } from './IconComponents';
 
 interface RegisterProps {
@@ -27,7 +27,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
     try {
       const { data, error } = await createUserWithEmailAndPassword(email, password);
       if (error) throw error;
-      if (data.user) await createUserDocument(data.user);
+      if (!data.user) throw new Error('Account creation did not return a user.');
       // On successful registration, onAuthStateChanged in App.tsx will handle the redirect.
     } catch (err: any) {
       setError(err.message || 'Failed to create an account. The email might already be in use.');

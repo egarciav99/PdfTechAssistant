@@ -3,7 +3,6 @@ import {
   onAuthStateChanged, 
   signOut,
   createUserWithEmailAndPassword,
-  createUserDocument
 } from '../services/supabase';
 import { signInWithEmailAndPassword } from '../services/supabase';
 import type { SupabaseUser } from '../types';
@@ -28,13 +27,6 @@ export const useAuth = (): UseAuthReturn => {
     const { data } = onAuthStateChanged(async (_event, session) => {
       const user = session?.user || null;
       setCurrentUser(user);
-      if (user) {
-        try {
-          await createUserDocument(user);
-        } catch (error) {
-          console.error('Failed to initialize user profile', error);
-        }
-      }
       setIsLoading(false);
     });
     
@@ -60,7 +52,7 @@ export const useAuth = (): UseAuthReturn => {
     try {
       const { data, error } = await createUserWithEmailAndPassword(email, password);
       if (error) throw error;
-      if (data.user) await createUserDocument(data.user);
+      if (!data.user) throw new Error('Account creation did not return a user.');
     } catch (err: any) {
       const message = err.message || 'Failed to create account. The email might already be in use.';
       setError(message);

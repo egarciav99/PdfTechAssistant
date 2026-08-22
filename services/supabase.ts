@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { SUPABASE_CONFIG } from '../constants';
 import type { DocumentItem, ResumenDocument } from '../types';
 
@@ -18,17 +18,6 @@ export const signOut = () => supabase.auth.signOut();
 export const onAuthStateChanged = (
   callback: (event: AuthChangeEvent, session: Session | null) => void,
 ) => supabase.auth.onAuthStateChange(callback);
-
-export const createUserDocument = async (user: User): Promise<void> => {
-  const { error } = await supabase.from('profiles').upsert({
-    id: user.id,
-    email: user.email,
-  });
-
-  if (error && error.code !== '42P01') {
-    throw new Error(`Failed to initialize user profile: ${error.message}`);
-  }
-};
 
 export const getUserDocuments = async (uid: string): Promise<DocumentItem[]> => {
   const { data, error } = await supabase
@@ -125,4 +114,3 @@ export const processDocument = async (documentId: string): Promise<void> => {
   if (error) throw new Error(`Could not process document: ${error.message}`);
 };
 
-export { User };
