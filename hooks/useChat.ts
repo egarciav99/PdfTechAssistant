@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '../services/firebase';
+import { supabase } from '../services/supabase';
 import type { ChatMessage, DocumentItem } from '../types';
 
 interface UseChatReturn {
@@ -157,10 +156,12 @@ export const useChat = (userId: string | null = null, documentId: string | null 
         uid: userId,
       };
 
-      const chatWithDocument = httpsCallable(functions, 'chatWithDocument', { timeout: 30000 });
-      const response = await chatWithDocument(payload);
+      const { data, error } = await supabase.functions.invoke('chat-with-document', {
+        body: payload,
+      });
+      if (error) throw error;
       
-      const responseText = parseChatResponse(response.data);
+      const responseText = parseChatResponse(data);
 
       const botResponse: ChatMessage = { sender: 'bot', text: responseText };
       setMessages(prev => [...prev.slice(0, -1), botResponse]);

@@ -2,16 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock environment variables before importing hooks
 vi.mock('../../constants', () => ({
-  N8N_CHAT_URL: 'https://test.n8n.com/webhook/chat',
-  N8N_INGESTION_URL: 'https://test.n8n.com/webhook/ingestion',
-  FIREBASE_CONFIG: {
-    apiKey: 'test-api-key',
-    authDomain: 'test.firebaseapp.com',
-    projectId: 'test-project',
-    storageBucket: 'test.appspot.com',
-    messagingSenderId: '123456',
-    appId: 'test-app-id',
-    measurementId: 'test-measurement'
+  SUPABASE_CONFIG: {
+    url: 'https://test-project.supabase.co',
+    anonKey: 'test-anon-key'
   }
 }));
 
@@ -19,7 +12,7 @@ import { renderHook, act } from '@testing-library/react';
 import { useChat } from '../../hooks/useChat';
 
 // Mock fetch
-global.fetch = vi.fn();
+globalThis.fetch = vi.fn();
 
 describe('useChat', () => {
   beforeEach(() => {

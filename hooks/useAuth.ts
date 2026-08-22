@@ -1,16 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { 
-  auth, 
   onAuthStateChanged, 
-  signOut as firebaseSignOut,
+  signOut,
   createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
   createUserDocument
-} from '../services/firebase';
-import type { FirebaseUser } from '../types';
+} from '../services/supabase';
+import { signInWithEmailAndPassword } from '../services/supabase';
+import type { SupabaseUser } from '../types';
 
 interface UseAuthReturn {
-  currentUser: FirebaseUser | null;
+  currentUser: SupabaseUser | null;
   isLoading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
@@ -20,21 +19,26 @@ interface UseAuthReturn {
 }
 
 export const useAuth = (): UseAuthReturn => {
-  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Listen for auth state changes
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const { data } = onAuthStateChanged(async (_event, session) => {
+      const user = session?.user || null;
       setCurrentUser(user);
       if (user) {
-        await createUserDocument(user.uid);
+        try {
+          await createUserDocument(user);
+        } catch (error) {
+          console.error('Failed to initialize user profile', error);
+        }
       }
       setIsLoading(false);
     });
     
-    return () => unsubscribe();
+    return () => data.subscription.unsubscribe();
   }, []);
 
   const clearError = useCallback(() => setError(null), []);
@@ -42,7 +46,8 @@ export const useAuth = (): UseAuthReturn => {
   const login = useCallback(async (email: string, password: string): Promise<void> => {
     setError(null);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const { error } = await signInWithEmailAndPassword(email, password);
+      if (error) throw error;
     } catch (err: any) {
       const message = err.message || 'Failed to sign in. Please check your credentials.';
       setError(message);
@@ -53,8 +58,9 @@ export const useAuth = (): UseAuthReturn => {
   const register = useCallback(async (email: string, password: string): Promise<void> => {
     setError(null);
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await createUserDocument(userCredential.user.uid);
+      const { data, error } = await createUserWithEmailAndPassword(email, password);
+      if (error) throw error;
+      if (data.user) await createUserDocument(data.user);
     } catch (err: any) {
       const message = err.message || 'Failed to create account. The email might already be in use.';
       setError(message);
@@ -64,7 +70,8 @@ export const useAuth = (): UseAuthReturn => {
 
   const logout = useCallback(async (): Promise<void> => {
     try {
-      await firebaseSignOut(auth);
+      const { error } = await signOut();
+      if (error) throw error;
     } catch (err: any) {
       const message = err.message || 'Failed to sign out.';
       setError(message);

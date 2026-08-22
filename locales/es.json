@@ -110,7 +110,7 @@
         "goBack": "Volver"
     },
     "footer": {
-        "poweredBy": "Impulsado por React, Firebase y n8n",
+        "poweredBy": "Impulsado por React, Supabase y Gemini",
         "privacy": "Privacidad",
         "terms": "Términos"
     },
@@ -143,7 +143,7 @@
                 "title": "Compartir Datos con Terceros",
                 "intro": "Compartimos datos con los siguientes proveedores de servicios:",
                 "gemini": "Procesamos el contenido de tus documentos para generar resúmenes y respuestas",
-                "firebase": "Almacenamiento de autenticación, archivos y metadatos",
+                "supabase": "Autenticación, archivos, base de datos y búsqueda vectorial",
                 "supabase": "Almacenamiento de embeddings vectoriales para búsqueda semántica"
             },
             "dataSecurity": {

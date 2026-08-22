@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { createUserWithEmailAndPassword, auth, createUserDocument } from '../services/firebase';
+import { createUserWithEmailAndPassword, createUserDocument } from '../services/supabase';
 import { FileTextIcon } from './IconComponents';
 
 interface RegisterProps {
@@ -25,8 +25,9 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
     }
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await createUserDocument(userCredential.user.uid);
+      const { data, error } = await createUserWithEmailAndPassword(email, password);
+      if (error) throw error;
+      if (data.user) await createUserDocument(data.user);
       // On successful registration, onAuthStateChanged in App.tsx will handle the redirect.
     } catch (err: any) {
       setError(err.message || 'Failed to create an account. The email might already be in use.');

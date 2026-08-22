@@ -1,162 +1,68 @@
 # PDF Technical Assistant
 
-> Turn technical PDFs into actionable knowledge through AI-powered conversation.
+Aplicación React para subir PDFs técnicos, generar resúmenes de ingeniería eléctrica y conversar con evidencia mediante RAG.
 
-<div align="center">
-  <img src="https://img.shields.io/badge/React-18.3-61DAFB?logo=react&logoColor=white" alt="React" />
-  <img src="https://img.shields.io/badge/TypeScript-5.2-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/Firebase-Cloud-FFCA28?logo=firebase&logoColor=black" alt="Firebase" />
-  <img src="https://img.shields.io/badge/n8n-Automation-FF6D5A?logo=n8n&logoColor=white" alt="n8n" />
-  <img src="https://img.shields.io/badge/Vite-Build-646CFF?logo=vite&logoColor=white" alt="Vite" />
-</div>
+## Arquitectura
 
-## 🎯 Problem & Solution
-
-**Problem:** Technical teams waste hours searching through lengthy PDF documents (manuals, research papers, specifications) to find critical information.
-
-**Solution:** A three-step workflow:
-1. **Upload** - Drag & drop any technical PDF
-2. **Summarize** - AI generates structured technical summary
-3. **Chat** - Ask questions and get contextual answers from the document
-
-## 🏗️ Architecture
-
-```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│   React Client  │────▶│  Firebase Suite  │◀────│   n8n Workflow  │
-│  (TypeScript)   │     │  • Auth          │     │   (AI Brain)    │
-│                 │     │  • Firestore     │     │                 │
-│                 │     │  • Storage       │     │  • Document     │
-└─────────────────┘     └──────────────────┘     │    Ingestion    │
-         │                      │                │  • RAG Chat     │
-         │                      ▼                │    Engine       │
-         │               ┌──────────────┐        └─────────────────┘
-         └──────────────▶│  Resumenes   │                 │
-                         │ Collection   │◀────────────────┘
-                         └──────────────┘
+```text
+React + Supabase Auth
+        |
+        +-- Supabase Storage (PDF)
+        +-- Postgres + RLS (documentos, resúmenes, memoria)
+        +-- pgvector (chunks y embeddings)
+        +-- Edge Functions (procesamiento y chat)
+                         |
+                         +-- Google Gemini (embeddings y generación)
 ```
 
-**Flow:**
-1. User uploads PDF → Firebase Storage
-2. Metadata saved → Firestore (`users/{uid}`)
-3. n8n webhook triggered → Document processing pipeline
-4. Summary stored → Firestore (`resumenes/{storageId}`)
-5. Chat queries → n8n RAG workflow with vector search
+## Configuración local
 
-## 🚀 Quick Start
-
-### Prerequisites
-- Node.js 18+
-- Firebase project with Auth, Firestore, and Storage enabled
-- n8n instance with ingestion and chat workflows
-
-### Installation
+Requisitos: Node.js 18+, un proyecto Supabase y una clave de Gemini.
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/yourusername/pdf-technical-assistant.git
-cd pdf-technical-assistant
-
-# 2. Install dependencies
 npm install
+npx supabase login
+npx supabase link --project-ref <PROJECT_REF>
+npx supabase db push
+npx supabase secrets set GEMINI_API_KEY=<GEMINI_KEY>
+npx supabase functions deploy process-document
+npx supabase functions deploy chat-with-document
+```
 
-# 3. Configure environment variables
-cp .env.example .env.local
-# Edit .env.local with your Firebase and n8n credentials
+Crea `.env.local`:
 
-# 4. Start development server
+```env
+VITE_SUPABASE_URL=https://<PROJECT_REF>.supabase.co
+VITE_SUPABASE_ANON_KEY=<SUPABASE_ANON_KEY>
+```
+
+La clave `service_role` y `GEMINI_API_KEY` solo se configuran como secretos de Edge Functions. Nunca deben estar en el frontend.
+
+## Ejecución
+
+```bash
 npm run dev
 ```
 
-### Environment Variables
+La migración [supabase/migrations/001_initial_schema.sql](supabase/migrations/001_initial_schema.sql) crea `user_documents`, chunks, resúmenes, memoria, RLS, bucket privado y la función de búsqueda vectorial. Usa `user_documents` para no colisionar con la tabla vectorial `documents` de instalaciones anteriores. La subida invoca `process-document`; el chat invoca `chat-with-document`.
 
-Create `.env.local`:
-
-```env
-# Firebase Configuration
-VITE_FIREBASE_API_KEY=your_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
-VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
-
-# n8n Webhooks
-VITE_N8N_INGESTION_URL=https://your-n8n-instance.com/webhook/ingestion
-VITE_N8N_CHAT_URL=https://your-n8n-instance.com/webhook/chat
-```
-
-## 🛠️ Tech Stack
-
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| **Frontend** | React 18 + TypeScript | UI Components, State Management |
-| **Styling** | Tailwind CSS | Utility-first responsive design |
-| **Backend** | Firebase (Auth, Firestore, Storage) | Auth, Data persistence, File storage |
-| **Automation** | n8n | Document processing, AI orchestration |
-| **AI** | Google Gemini (via n8n) | Summarization, RAG chat |
-| **Build** | Vite | Fast development, optimized builds |
-
-## 📁 Project Structure
-
-```
-src/
-├── components/          # React UI components
-│   ├── ChatSection.tsx
-│   ├── DocumentList.tsx
-│   ├── Login.tsx
-│   ├── Register.tsx
-│   ├── SummarySection.tsx
-│   ├── UploadSection.tsx
-│   └── IconComponents.tsx
-├── hooks/              # Custom React hooks
-│   ├── useAuth.ts
-│   └── useDocuments.ts
-├── services/           # External service integrations
-│   └── firebase.ts
-├── types.ts            # TypeScript type definitions
-├── constants.ts        # Environment-based configuration
-└── App.tsx             # Main application component
-```
-
-## 🧪 Testing
+## Pruebas y build
 
 ```bash
-# Run unit tests
 npm test
-
-# Run tests with coverage
-npm run test:coverage
-
-# Run E2E tests (Playwright)
-npm run test:e2e
-```
-
-## 🚀 Deployment
-
-### Firebase Hosting (Recommended)
-
-```bash
-# Build for production
 npm run build
-
-# Deploy to Firebase
-firebase deploy
 ```
 
-### Vercel/Netlify
+## Estructura relevante
 
-Connect your GitHub repository for automatic deployments on push.
+```text
+components/                 UI
+hooks/                      Auth, documentos y chat
+services/supabase.ts        Cliente Supabase y operaciones CRUD
+supabase/migrations/        Esquema Postgres/RLS/pgvector
+supabase/functions/         Procesamiento PDF y agente RAG
+```
 
-## 📝 License
+## Seguridad
 
-MIT License - see [LICENSE](./LICENSE) for details.
-
-## 🤝 Contributing
-
-We welcome contributions! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
-
----
-
-Built with ❤️ for technical teams who value their time.
+Las tablas y los archivos se aíslan por `auth.uid()`. La función de chat verifica que el documento y la sesión pertenecen al usuario autenticado antes de consultar pgvector o guardar memoria.

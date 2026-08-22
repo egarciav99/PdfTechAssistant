@@ -1,5 +1,5 @@
 
-import type { User } from 'firebase/auth';
+import type { User } from '@supabase/supabase-js';
 
 export type AppState = 'dashboard' | 'uploading' | 'chat' | 'view-summary' | 'error';
 
@@ -21,6 +21,7 @@ export interface DocumentItem {
   summary?: string | SummaryData; 
   resumen?: string; 
   createdAt: number;
+  status?: 'uploaded' | 'processing' | 'ready' | 'error';
 }
 
 // Nueva interfaz para la colección 'resumenes'
@@ -36,4 +37,4 @@ export interface UserDocument {
   documents: DocumentItem[];
 }
 
-export type FirebaseUser = User;
+export type SupabaseUser = User;

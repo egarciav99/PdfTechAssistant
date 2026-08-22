@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { signInWithEmailAndPassword, auth } from '../services/firebase';
+import { signInWithEmailAndPassword } from '../services/supabase';
 import { FileTextIcon } from './IconComponents';
 
 interface LoginProps {
@@ -25,7 +25,8 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister }) => {
     }
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const { error } = await signInWithEmailAndPassword(email, password);
+      if (error) throw error;
       // On successful login, onAuthStateChanged in App.tsx will handle the redirect.
     } catch (err: any) {
       setError(err.message || 'Failed to sign in. Please check your credentials.');

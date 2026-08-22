@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { 
   getUserDocuments,
-  deleteUserDocument as firebaseDeleteDocument,
-  uploadFileToFirebase,
+  deleteUserDocument,
+  uploadFileToSupabase,
   addNewDocumentToUser,
-  getDocumentSummary
-} from '../services/firebase';
-import { FIREBASE_CONFIG } from '../constants';
+  getDocumentSummary,
+  processDocument,
+} from '../services/supabase';
 import type { DocumentItem, ResumenDocument } from '../types';
 
 interface UseDocumentsReturn {
@@ -15,7 +15,7 @@ interface UseDocumentsReturn {
   error: string | null;
   uploadDocument: (file: File, userId: string) => Promise<void>;
   deleteDocument: (doc: DocumentItem, userId: string) => Promise<void>;
-  fetchSummary: (storageId: string) => Promise<ResumenDocument | null>;
+  fetchSummary: (documentId: string) => Promise<ResumenDocument | null>;
   clearError: () => void;
 }
 
@@ -24,7 +24,7 @@ export const useDocuments = (userId: string | null): UseDocumentsReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Lectura puntual de los documentos del usuario (subcolección)
+  // Load the authenticated user's documents through RLS.
   useEffect(() => {
     if (!userId) {
       setDocuments([]);
@@ -50,9 +50,9 @@ export const useDocuments = (userId: string | null): UseDocumentsReturn => {
 
     try {
       // 1. Upload to Storage
-      const storageId = await uploadFileToFirebase(file);
+      const storageId = await uploadFileToSupabase(file, uid);
 
-      // 2. Add metadata to Firestore
+      // 2. Add relational document metadata
       const newDoc = await addNewDocumentToUser(uid, {
         name: file.name,
         storageId: storageId,
@@ -61,9 +61,10 @@ export const useDocuments = (userId: string | null): UseDocumentsReturn => {
       // 3. Update local state immediately so the UI reflects the new document
       if (newDoc) {
         setDocuments(prev => [newDoc as DocumentItem, ...prev]);
+        await processDocument(newDoc.id);
       }
 
-      // 4. Document processing is automatic via Firebase Storage trigger (processDocument.ts)
+      // Processing runs through the Supabase Edge Function after upload.
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Upload failed.';
       setError(message);
@@ -75,7 +76,7 @@ export const useDocuments = (userId: string | null): UseDocumentsReturn => {
 
   const deleteDocument = useCallback(async (doc: DocumentItem, uid: string): Promise<void> => {
     try {
-      await firebaseDeleteDocument(uid, doc.id, doc.storageId);
+      await deleteUserDocument(uid, doc.id, doc.storageId);
       // Update local state immediately so the UI reflects the deletion
       setDocuments(prev => prev.filter(d => d.id !== doc.id));
     } catch (err) {
@@ -85,9 +86,9 @@ export const useDocuments = (userId: string | null): UseDocumentsReturn => {
     }
   }, []);
 
-  const fetchSummary = useCallback(async (storageId: string): Promise<ResumenDocument | null> => {
+  const fetchSummary = useCallback(async (documentId: string): Promise<ResumenDocument | null> => {
     try {
-      return await getDocumentSummary(storageId);
+      return await getDocumentSummary(documentId);
     } catch (err) {
       return null;
     }

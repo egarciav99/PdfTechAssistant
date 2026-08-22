@@ -45,7 +45,7 @@ const App: React.FC = () => {
     deleteDocument,
     fetchSummary,
     clearError: clearDocError 
-  } = useDocuments(currentUser?.uid || null);
+  } = useDocuments(currentUser?.id || null);
   
   const { 
     messages, 
@@ -53,7 +53,7 @@ const App: React.FC = () => {
     error: chatError,
     sendMessage, 
     clearError: clearChatError
-  } = useChat(currentUser?.uid || null, activeDocument?.storageId || null);
+  } = useChat(currentUser?.id || null, activeDocument?.storageId || null);
 
   // Aggregate errors
   const globalError = authError || docError || chatError;
@@ -83,7 +83,7 @@ const App: React.FC = () => {
     setView('uploading');
 
     try {
-      await uploadDocument(selectedFile, currentUser.uid);
+      await uploadDocument(selectedFile, currentUser.id);
       setSelectedFile(null);
       setView('dashboard');
     } catch (err) {
@@ -101,7 +101,7 @@ const App: React.FC = () => {
   const handleDeleteDocument = useCallback(async (doc: DocumentItem) => {
     if (!currentUser) return;
     try {
-      await deleteDocument(doc, currentUser.uid);
+      await deleteDocument(doc, currentUser.id);
       if (activeDocument?.id === doc.id) {
         handleBackToDashboard();
       }
@@ -122,7 +122,7 @@ const App: React.FC = () => {
     setFetchedSummary(null);
     
     try {
-      const summaryDoc = await fetchSummary(doc.storageId);
+      const summaryDoc = await fetchSummary(doc.id);
       if (summaryDoc && summaryDoc.resumen) {
         setFetchedSummary(summaryDoc.resumen);
       }
@@ -135,7 +135,7 @@ const App: React.FC = () => {
 
   const handleSendChatMessage = useCallback(async (query: string) => {
     if (!activeDocument || !currentUser) return;
-    await sendMessage(query, activeDocument, currentUser.uid);
+    await sendMessage(query, activeDocument, currentUser.id);
   }, [activeDocument, currentUser, sendMessage]);
 
   // --- Render Helpers ---
@@ -336,7 +336,7 @@ const App: React.FC = () => {
       </main>
 
       <footer className="text-center py-6 text-gray-400 text-xs sm:text-sm">
-        <p>Powered by React, Firebase & n8n</p>
+        <p>Powered by React, Supabase & Gemini</p>
       </footer>
     </div>
   );
