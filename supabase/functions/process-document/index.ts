@@ -4,6 +4,7 @@ import pdf from 'npm:pdf-parse@1.1.1';
 import { Buffer } from 'node:buffer';
 import { CHAT_SYSTEM_PROMPT } from '../_shared/prompts.ts';
 import { mapWithConcurrency, retryTransient } from '../_shared/retry.ts';
+import { redactSensitiveData } from '../_shared/redaction.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -33,7 +34,11 @@ const requestGemini = async (url: string, body: unknown, label: string): Promise
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    if (!response.ok) throw new GeminiHttpError(`${label}: ${await response.text()}`, response.status);
+    if (!response.ok) {
+      const referenceId = crypto.randomUUID();
+      console.error(`[Gemini] ${label} failed status=${response.status} reference=${referenceId}`);
+      throw new GeminiHttpError(`${label} failed; reference=${referenceId}`, response.status);
+    }
     return response.json();
   }, label);
 
@@ -143,7 +148,7 @@ Deno.serve(async (request) => {
       if (downloadError || !file) throw downloadError || new Error('Could not download document');
       const buffer = await file.arrayBuffer();
       const parsed = await pdf(Buffer.from(buffer));
-      const text = parsed.text.trim();
+      const text = redactSensitiveData(parsed.text.trim());
       if (!text) throw new Error('No text extracted from PDF');
 
       const chunks = splitIntoChunks(text);
@@ -163,12 +168,14 @@ Deno.serve(async (request) => {
       await admin.from('user_documents').update({ status: 'ready' }).eq('id', documentId);
       return json({ success: true, documentId });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const referenceId = crypto.randomUUID();
+      console.error(`[Process] document processing failed reference=${referenceId}`);
       const { error: cleanupError } = await admin.from('document_chunks').delete().eq('document_id', documentId);
       if (cleanupError) console.error('Failed to clean partial document chunks:', cleanupError);
-      await admin.from('user_documents').update({ status: 'error', error_message: message }).eq('id', documentId);
-      await admin.from('processing_errors').insert({ document_id: documentId, user_id: user.id, error: message });
-      return json({ error: message }, 500);
+      const safeMessage = `Document processing failed; reference=${referenceId}`;
+      await admin.from('user_documents').update({ status: 'error', error_message: safeMessage }).eq('id', documentId);
+      await admin.from('processing_errors').insert({ document_id: documentId, user_id: user.id, error: safeMessage });
+      return json({ error: safeMessage }, 500);
     }
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : 'Internal server error' }, 500);

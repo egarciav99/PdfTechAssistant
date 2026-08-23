@@ -30,7 +30,11 @@ const requestGemini = async (url: string, body: unknown, label: string): Promise
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    if (!response.ok) throw new GeminiHttpError(`${label}: ${await response.text()}`, response.status);
+    if (!response.ok) {
+      const referenceId = crypto.randomUUID();
+      console.error(`[Gemini] ${label} failed status=${response.status} reference=${referenceId}`);
+      throw new GeminiHttpError(`${label} failed; reference=${referenceId}`, response.status);
+    }
     return response.json();
   }, label);
 
@@ -114,7 +118,11 @@ Deno.serve(async (request: Request) => {
           foundResultsInTurn = true;
           foundResultsInRequest = true;
         }
-        functionParts.push({ functionResponse: { name: 'search_document_chunks', response: { documentId, results: matches } } });
+        const dataResults = (matches || []).map((match: { content: string; metadata: unknown; similarity: number }) => ({
+          ...match,
+          content: `<<<BEGIN RETRIEVED DATA>>>\n${match.content}\n<<<END RETRIEVED DATA>>>`,
+        }));
+        functionParts.push({ functionResponse: { name: 'search_document_chunks', response: { documentId, results: dataResults } } });
       }
       contents.push({ role: 'model', parts });
       contents.push({ role: 'user', parts: functionParts });
@@ -133,7 +141,8 @@ Deno.serve(async (request: Request) => {
     ]);
     return json({ output: html, sessionId });
   } catch (error) {
-    console.error(error);
-    return json({ error: error instanceof Error ? error.message : 'Internal server error' }, 500);
+    const referenceId = crypto.randomUUID();
+    console.error(`[Chat] request failed reference=${referenceId}`);
+    return json({ error: `Chat request failed; reference=${referenceId}` }, 500);
   }
 });
