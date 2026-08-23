@@ -13,7 +13,7 @@ const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const geminiKey = Deno.env.get('GEMINI_API_KEY')!;
 const admin = createClient(supabaseUrl, serviceKey);
 const embeddingModel = 'gemini-embedding-001';
-const chatModel = 'gemini-2.0-flash';
+const chatModel = 'gemini-3.6-flash';
 
 const generateEmbedding = async (text: string): Promise<number[]> => {
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${embeddingModel}:embedContent?key=${geminiKey}`, {

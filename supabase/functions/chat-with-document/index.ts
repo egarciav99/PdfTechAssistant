@@ -9,7 +9,7 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 const geminiKey = Deno.env.get('GEMINI_API_KEY')!;
 const embeddingModel = 'gemini-embedding-001';
-const chatModel = 'gemini-2.0-flash';
+const chatModel = 'gemini-3.6-flash';
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
   status,
