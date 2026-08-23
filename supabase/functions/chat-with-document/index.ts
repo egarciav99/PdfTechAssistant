@@ -1,6 +1,7 @@
 /// <reference path="../types.d.ts" />
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { CHAT_SYSTEM_PROMPT, NO_RESULTS_HTML } from '../_shared/prompts.ts';
+import { retryTransient } from '../_shared/retry.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,6 +12,27 @@ const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 const geminiKey = Deno.env.get('GEMINI_API_KEY')!;
 const embeddingModel = 'gemini-embedding-001';
 const chatModel = 'gemini-3.6-flash';
+const DOCUMENT_NOT_READY_HTML = '<div style="padding:15px;background:#fff7ed;color:#9a3412;border:1px solid #fdba74;border-radius:8px;font-family:Arial,sans-serif"><strong>Documento no disponible</strong><br>El documento todavía se está procesando o terminó con error. Espera a que finalice el procesamiento y vuelve a intentarlo.</div>';
+
+class GeminiHttpError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
+const requestGemini = async (url: string, body: unknown, label: string): Promise<any> =>
+  retryTransient(async () => {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) throw new GeminiHttpError(`${label}: ${await response.text()}`, response.status);
+    return response.json();
+  }, label);
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
   status,
@@ -18,24 +40,20 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 });
 
 const embedding = async (text: string): Promise<number[]> => {
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${embeddingModel}:embedContent?key=${geminiKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content: { parts: [{ text }] }, outputDimensionality: 768 }),
-  });
-  if (!response.ok) throw new Error(`Embedding request failed: ${await response.text()}`);
-  const data = await response.json();
+  const data = await requestGemini(
+    `https://generativelanguage.googleapis.com/v1beta/models/${embeddingModel}:embedContent?key=${geminiKey}`,
+    { content: { parts: [{ text }] }, outputDimensionality: 768 },
+    'Embedding request',
+  );
   return data.embedding.values;
 };
 
 const generate = async (contents: unknown[], tools?: unknown[]) => {
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${chatModel}:generateContent?key=${geminiKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ systemInstruction: { parts: [{ text: CHAT_SYSTEM_PROMPT }] }, contents, tools }),
-  });
-  if (!response.ok) throw new Error(`Gemini request failed: ${await response.text()}`);
-  return response.json();
+  return requestGemini(
+    `https://generativelanguage.googleapis.com/v1beta/models/${chatModel}:generateContent?key=${geminiKey}`,
+    { systemInstruction: { parts: [{ text: CHAT_SYSTEM_PROMPT }] }, contents, tools },
+    'Chat generation request',
+  );
 };
 
 const tool = {
@@ -67,8 +85,9 @@ Deno.serve(async (request: Request) => {
     const { query, sessionId, documentId } = await request.json();
     if (!query || !sessionId || !documentId) return json({ error: 'query, sessionId and documentId are required' }, 400);
 
-    const { data: document, error: documentError } = await client.from('user_documents').select('id').eq('id', documentId).eq('user_id', user.id).single();
+    const { data: document, error: documentError } = await client.from('user_documents').select('id, status, error_message').eq('id', documentId).eq('user_id', user.id).single();
     if (documentError || !document) return json({ error: 'Document not found' }, 404);
+    if (document.status !== 'ready') return json({ output: DOCUMENT_NOT_READY_HTML, sessionId, status: document.status, error: document.error_message });
     const { data: session, error: sessionError } = await client.from('chat_sessions').upsert({ id: sessionId, user_id: user.id, document_id: documentId }, { onConflict: 'id' }).select().single();
     if (sessionError || !session) return json({ error: 'Invalid chat session' }, 400);
 
@@ -77,6 +96,7 @@ Deno.serve(async (request: Request) => {
     contents.push({ role: 'user', parts: [{ text: `Documento activo: ${documentId}\nConsulta: ${query}\nDebes usar la herramienta antes de responder.` }] });
 
     let result = await generate(contents, [tool]);
+    let foundResultsInRequest = false;
     for (let attempt = 0; attempt < 3; attempt++) {
       const parts = result.candidates?.[0]?.content?.parts || [];
       const calls = parts.filter((part: any) => part.functionCall);
@@ -90,14 +110,19 @@ Deno.serve(async (request: Request) => {
         const limit = Math.min(Math.max(Number(args.limit) || 4, 1), 8);
         const { data: matches, error: matchError } = await client.rpc('match_document_chunks', { query_embedding: vector, requested_document_id: documentId, match_threshold: 0.45, match_count: limit });
         if (matchError) throw matchError;
-        if (matches?.length) foundResultsInTurn = true;
+        if (matches?.length) {
+          foundResultsInTurn = true;
+          foundResultsInRequest = true;
+        }
         functionParts.push({ functionResponse: { name: 'search_document_chunks', response: { documentId, results: matches } } });
       }
       contents.push({ role: 'model', parts });
       contents.push({ role: 'user', parts: functionParts });
       result = await generate(contents, [tool]);
 
-      if (!foundResultsInTurn) return json({ output: NO_RESULTS_HTML, sessionId });
+      if (!foundResultsInTurn && !foundResultsInRequest) {
+        return json({ output: NO_RESULTS_HTML, sessionId });
+      }
     }
 
     const output = result.candidates?.[0]?.content?.parts?.map((part: any) => part.text || '').join('').trim() || NO_RESULTS_HTML;
