@@ -11,11 +11,13 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [confirmationSent, setConfirmationSent] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setConfirmationSent(false);
     setIsLoading(true);
 
     if (password.length < 6) {
@@ -28,7 +30,9 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
       const { data, error } = await createUserWithEmailAndPassword(email, password);
       if (error) throw error;
       if (!data.user) throw new Error('Account creation did not return a user.');
-      // On successful registration, onAuthStateChanged in App.tsx will handle the redirect.
+      if (!data.session) {
+        setConfirmationSent(true);
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to create an account. The email might already be in use.');
     } finally {
@@ -45,6 +49,14 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
         </div>
         <p className="mt-2 text-gray-500">Get started with your PDF assistant</p>
       </div>
+      {confirmationSent ? (
+        <div className="space-y-4 text-center">
+          <div className="rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+            Account created. Check your email and click the confirmation link before signing in.
+          </div>
+          <p className="text-sm text-gray-500">The link will return you to this application.</p>
+        </div>
+      ) : (
       <form onSubmit={handleRegister} className="space-y-6">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email Address</label>
@@ -85,6 +97,7 @@ const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
           </button>
         </div>
       </form>
+      )}
       <p className="text-center text-sm text-gray-500">
         Already have an account?{' '}
         <button onClick={onSwitchToLogin} className="font-medium text-blue-600 hover:text-blue-500">
