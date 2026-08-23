@@ -70,7 +70,10 @@ export const addNewDocumentToUser = async (
     .select('id, original_name, storage_path, created_at, status')
     .single();
 
-  if (error || !data) throw new Error(`Could not create document: ${error?.message || 'unknown error'}`);
+  if (error || !data) {
+    await supabase.storage.from('documents').remove([fileData.storageId]);
+    throw new Error(`Could not create document: ${error?.message || 'unknown error'}`);
+  }
 
   return {
     id: data.id,
@@ -113,10 +116,23 @@ export const getDocumentSummary = async (documentId: string): Promise<ResumenDoc
 };
 
 export const processDocument = async (documentId: string): Promise<void> => {
-  const { error } = await supabase.functions.invoke('process-document', {
+  const { data, error } = await supabase.functions.invoke('process-document', {
     body: { documentId },
   });
 
-  if (error) throw new Error(`Could not process document: ${error.message}`);
+  if (error) {
+    let detail = error.message;
+    if (error.context instanceof Response) {
+      try {
+        const body = await error.context.json();
+        if (typeof body?.error === 'string') detail = body.error;
+      } catch {
+        // Keep the SDK error when the response is not JSON.
+      }
+    }
+    throw new Error(`Could not process document: ${detail}`);
+  }
+
+  if (data?.error) throw new Error(`Could not process document: ${data.error}`);
 };
 

@@ -151,9 +151,7 @@ export const useChat = (userId: string | null = null, documentId: string | null 
       const payload = {
         query: text,
         sessionId: conversationSessionId,
-        fileName: document.storageId,
-        docId: document.id,
-        uid: userId,
+        documentId: document.id,
       };
 
       const { data, error } = await supabase.functions.invoke('chat-with-document', {

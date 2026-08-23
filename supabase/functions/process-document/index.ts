@@ -2,6 +2,11 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import pdf from 'npm:pdf-parse@1.1.1';
 import { CHAT_SYSTEM_PROMPT } from '../_shared/prompts.ts';
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const geminiKey = Deno.env.get('GEMINI_API_KEY')!;
@@ -32,9 +37,16 @@ const generateSummary = async (text: string): Promise<string> => {
   return (await response.json()).candidates?.[0]?.content?.parts?.map((part: any) => part.text || '').join('').trim() || '<div>No se pudo generar el resumen.</div>';
 };
 
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
+  status,
+  headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+});
 
 Deno.serve(async (request) => {
+  if (request.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
   try {
     const token = request.headers.get('Authorization')?.replace('Bearer ', '');
     if (!token) return json({ error: 'Unauthorized' }, 401);
