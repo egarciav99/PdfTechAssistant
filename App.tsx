@@ -53,7 +53,7 @@ const App: React.FC = () => {
     error: chatError,
     sendMessage, 
     clearError: clearChatError
-  } = useChat(currentUser?.id || null, activeDocument?.storageId || null);
+  } = useChat(currentUser?.id || null, activeDocument?.id || null);
 
   // Aggregate errors
   const globalError = authError || docError || chatError;
@@ -78,7 +78,7 @@ const App: React.FC = () => {
   }, []);
 
   const handleStartUpload = useCallback(async () => {
-    if (!selectedFile || !currentUser) return;
+    if (!selectedFile || !currentUser || isDocLoading) return;
     
     setView('uploading');
 
@@ -273,6 +273,7 @@ const App: React.FC = () => {
             onUpload={handleStartUpload}
             selectedFile={selectedFile}
             error={null}
+            isUploading={isDocLoading}
           />
         </div>
       );

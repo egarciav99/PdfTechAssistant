@@ -45,10 +45,15 @@ export const getUserDocuments = async (uid: string): Promise<DocumentItem[]> => 
 
 export const uploadFileToSupabase = async (file: File, uid: string): Promise<string> => {
   const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-  const storagePath = `${uid}/${crypto.randomUUID()}_${sanitizedName}`;
+  const fileBytes = await file.arrayBuffer();
+  const digest = await crypto.subtle.digest('SHA-256', fileBytes);
+  const hash = Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+  const storagePath = `${uid}/${hash}_${sanitizedName}`;
   const { error } = await supabase.storage.from('documents').upload(storagePath, file, {
     contentType: file.type || 'application/pdf',
-    upsert: false,
+    upsert: true,
   });
 
   if (error) throw new Error(`Could not upload file: ${error.message}`);
@@ -71,6 +76,23 @@ export const addNewDocumentToUser = async (
     .single();
 
   if (error || !data) {
+    const { data: existingDocument } = await supabase
+      .from('user_documents')
+      .select('id, original_name, storage_path, created_at, status')
+      .eq('user_id', uid)
+      .eq('storage_path', fileData.storageId)
+      .maybeSingle();
+
+    if (existingDocument) {
+      return {
+        id: existingDocument.id,
+        nombreDocumento: existingDocument.original_name,
+        storageId: existingDocument.storage_path,
+        createdAt: new Date(existingDocument.created_at).getTime(),
+        status: existingDocument.status,
+      };
+    }
+
     await supabase.storage.from('documents').remove([fileData.storageId]);
     throw new Error(`Could not create document: ${error?.message || 'unknown error'}`);
   }

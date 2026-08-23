@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   getUserDocuments,
   deleteUserDocument,
@@ -23,6 +23,7 @@ export const useDocuments = (userId: string | null): UseDocumentsReturn => {
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const uploadInFlightRef = useRef(false);
 
   // Load the authenticated user's documents through RLS.
   useEffect(() => {
@@ -45,6 +46,8 @@ export const useDocuments = (userId: string | null): UseDocumentsReturn => {
   const clearError = useCallback(() => setError(null), []);
 
   const uploadDocument = useCallback(async (file: File, uid: string): Promise<void> => {
+    if (uploadInFlightRef.current) return;
+    uploadInFlightRef.current = true;
     setIsLoading(true);
     setError(null);
 
@@ -60,8 +63,13 @@ export const useDocuments = (userId: string | null): UseDocumentsReturn => {
 
       // 3. Update local state immediately so the UI reflects the new document
       if (newDoc) {
-        setDocuments(prev => [newDoc as DocumentItem, ...prev]);
-        await processDocument(newDoc.id);
+        setDocuments(prev => {
+          const withoutDuplicate = prev.filter(document => document.id !== newDoc.id);
+          return [newDoc as DocumentItem, ...withoutDuplicate];
+        });
+        if (newDoc.status === 'uploaded' || newDoc.status === 'error') {
+          await processDocument(newDoc.id);
+        }
       }
 
       // Processing runs through the Supabase Edge Function after upload.
@@ -70,6 +78,7 @@ export const useDocuments = (userId: string | null): UseDocumentsReturn => {
       setError(message);
       throw new Error(message);
     } finally {
+      uploadInFlightRef.current = false;
       setIsLoading(false);
     }
   }, []);

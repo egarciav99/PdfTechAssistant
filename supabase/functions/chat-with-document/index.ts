@@ -1,3 +1,4 @@
+/// <reference path="../types.d.ts" />
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { CHAT_SYSTEM_PROMPT, NO_RESULTS_HTML } from '../_shared/prompts.ts';
 
@@ -53,7 +54,7 @@ const tool = {
   }],
 };
 
-Deno.serve(async (request) => {
+Deno.serve(async (request: Request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
@@ -72,7 +73,7 @@ Deno.serve(async (request) => {
     if (sessionError || !session) return json({ error: 'Invalid chat session' }, 400);
 
     const { data: history } = await client.from('chat_messages').select('role, content').eq('session_id', sessionId).order('created_at', { ascending: false }).limit(10);
-    const contents: any[] = (history || []).reverse().map((message) => ({ role: message.role === 'assistant' ? 'model' : 'user', parts: [{ text: message.content }] }));
+    const contents: any[] = (history || []).reverse().map((message: { role: string; content: string }) => ({ role: message.role === 'assistant' ? 'model' : 'user', parts: [{ text: message.content }] }));
     contents.push({ role: 'user', parts: [{ text: `Documento activo: ${documentId}\nConsulta: ${query}\nDebes usar la herramienta antes de responder.` }] });
 
     let result = await generate(contents, [tool]);
@@ -81,6 +82,7 @@ Deno.serve(async (request) => {
       const calls = parts.filter((part: any) => part.functionCall);
       if (!calls.length) break;
       const functionParts = [];
+      let foundResultsInTurn = false;
       for (const part of calls) {
         const args = part.functionCall.args || {};
         const searchText = typeof args.query === 'string' && args.query.trim() ? args.query : query;
@@ -88,12 +90,14 @@ Deno.serve(async (request) => {
         const limit = Math.min(Math.max(Number(args.limit) || 4, 1), 8);
         const { data: matches, error: matchError } = await client.rpc('match_document_chunks', { query_embedding: vector, requested_document_id: documentId, match_threshold: 0.45, match_count: limit });
         if (matchError) throw matchError;
-        if (!matches?.length) return json({ output: NO_RESULTS_HTML, sessionId });
+        if (matches?.length) foundResultsInTurn = true;
         functionParts.push({ functionResponse: { name: 'search_document_chunks', response: { documentId, results: matches } } });
       }
       contents.push({ role: 'model', parts });
       contents.push({ role: 'user', parts: functionParts });
       result = await generate(contents, [tool]);
+
+      if (!foundResultsInTurn) return json({ output: NO_RESULTS_HTML, sessionId });
     }
 
     const output = result.candidates?.[0]?.content?.parts?.map((part: any) => part.text || '').join('').trim() || NO_RESULTS_HTML;

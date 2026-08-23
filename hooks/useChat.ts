@@ -139,7 +139,7 @@ export const useChat = (userId: string | null = null, documentId: string | null 
     setIsLoading(true);
     setError(null);
 
-    const conversationSessionId = ensureSessionId(userId, document.storageId);
+    const conversationSessionId = ensureSessionId(userId, document.id);
 
     const userMessage: ChatMessage = { sender: 'user', text: text };
     setMessages(prev => [...prev, userMessage]);

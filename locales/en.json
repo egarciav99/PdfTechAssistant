@@ -144,7 +144,7 @@
                 "intro": "We share data with the following service providers:",
                 "gemini": "We process your document content to generate summaries and answers",
                 "supabase": "Authentication, files, database, and vector search",
-                "supabase": "Storage of vector embeddings for semantic search"
+                "supabaseStorage": "Storage of vector embeddings for semantic search"
             },
             "dataSecurity": {
                 "title": "Data Security",

@@ -7,9 +7,10 @@ interface UploadSectionProps {
   onUpload: () => void;
   selectedFile: File | null;
   error: string | null;
+  isUploading: boolean;
 }
 
-const UploadSection: React.FC<UploadSectionProps> = ({ onFileSelect, onUpload, selectedFile, error }) => {
+const UploadSection: React.FC<UploadSectionProps> = ({ onFileSelect, onUpload, selectedFile, error, isUploading }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,15 +52,16 @@ const UploadSection: React.FC<UploadSectionProps> = ({ onFileSelect, onUpload, s
           className="hidden"
           ref={fileInputRef}
           onChange={handleFileChange}
+          disabled={isUploading}
         />
       </label>
       {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
       <button
         onClick={onUpload}
-        disabled={!selectedFile}
+        disabled={!selectedFile || isUploading}
         className="mt-6 w-full sm:w-auto px-8 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all transform hover:scale-105"
       >
-        Upload and Analyze Document
+        {isUploading ? 'Processing Document...' : 'Upload and Analyze Document'}
       </button>
     </div>
   );

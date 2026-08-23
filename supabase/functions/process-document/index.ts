@@ -1,3 +1,4 @@
+/// <reference path="../types.d.ts" />
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import pdf from 'npm:pdf-parse@1.1.1';
 import { Buffer } from 'node:buffer';
