@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import pdf from 'npm:pdf-parse@1.1.1';
+import { Buffer } from 'node:buffer';
 import { CHAT_SYSTEM_PROMPT } from '../_shared/prompts.ts';
 
 const corsHeaders = {
