@@ -9,6 +9,7 @@ import Login from './components/Login';
 import Register from './components/Register';
 import DocumentList from './components/DocumentList';
 import { FileTextIcon, LogOutIcon } from './components/IconComponents';
+import CreatedBy from './components/CreatedBy';
 
 const App: React.FC = () => {
   // Views: 'dashboard', 'uploading', 'chat', 'view-summary'
@@ -156,6 +157,7 @@ const App: React.FC = () => {
         ) : (
           <Register onSwitchToLogin={() => setAuthView('login')} />
         )}
+        <CreatedBy className="mt-6" />
       </div>
     );
   }
@@ -338,6 +340,7 @@ const App: React.FC = () => {
 
       <footer className="text-center py-6 text-gray-400 text-xs sm:text-sm">
         <p>Powered by React, Supabase & Gemini</p>
+        <CreatedBy className="mt-1" />
       </footer>
     </div>
   );
