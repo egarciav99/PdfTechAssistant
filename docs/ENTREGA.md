@@ -64,6 +64,10 @@ Una sola instalación para todas las empresas. Cada empresa ve solo lo suyo.
    ```
    - `PDF_APP_URL` es la dirección a la que llevan los correos de invitación.
    - `PDF_ALLOWED_ORIGINS` es la lista (separada por comas) de orígenes que pueden llamar a las funciones.
+   **Despliegue automático desde GitHub (opcional):** el workflow `.github/workflows/deploy-functions.yml` despliega las tres funciones cada vez que cambian en `main`, o a mano desde *Actions → Desplegar Edge Functions → Run workflow*. Se configura en *Settings → Secrets and variables → Actions*:
+   - secreto `SUPABASE_ACCESS_TOKEN`: un token de [supabase.com/dashboard/account/tokens](https://supabase.com/dashboard/account/tokens);
+   - variable `SUPABASE_PROJECT_REF`: el identificador del proyecto;
+   - opcionales: el secreto `GEMINI_API_KEY` y las variables `PDF_APP_URL` y `PDF_ALLOWED_ORIGINS`. Si están definidos, se envían a Supabase como secretos de las funciones.
 4. Ajustes de **Authentication**:
    - **Sign In / Providers:** desactiva *Allow new users to sign up* y deja el proveedor **Email** activo. Es el equivalente a `enable_signup = false` en `[auth]` de `supabase/config.toml`. No desactives el registro dentro de *Email*, porque también bloquea el inicio de sesión por correo.
    - **URL Configuration:** en *Site URL* pon la URL de la app y añádela también a *Redirect URLs*.
