@@ -1,64 +1,7 @@
 /// <reference path="../types.d.ts" />
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { CHAT_SYSTEM_PROMPT, NO_RESULTS_HTML } from '../_shared/prompts.ts';
-import { retryTransient } from '../_shared/retry.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-const geminiKey = Deno.env.get('GEMINI_API_KEY')!;
-const embeddingModel = 'gemini-embedding-001';
-const chatModel = 'gemini-3.6-flash';
-const DOCUMENT_NOT_READY_HTML = '<div style="padding:15px;background:#fff7ed;color:#9a3412;border:1px solid #fdba74;border-radius:8px;font-family:Arial,sans-serif"><strong>Documento no disponible</strong><br>El documento todavía se está procesando o terminó con error. Espera a que finalice el procesamiento y vuelve a intentarlo.</div>';
-
-class GeminiHttpError extends Error {
-  status: number;
-
-  constructor(message: string, status: number) {
-    super(message);
-    this.status = status;
-  }
-}
-
-const requestGemini = async (url: string, body: unknown, label: string): Promise<any> =>
-  retryTransient(async () => {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (!response.ok) {
-      const referenceId = crypto.randomUUID();
-      console.error(`[Gemini] ${label} failed status=${response.status} reference=${referenceId}`);
-      throw new GeminiHttpError(`${label} failed; reference=${referenceId}`, response.status);
-    }
-    return response.json();
-  }, label);
-
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
-  status,
-  headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-});
-
-const embedding = async (text: string): Promise<number[]> => {
-  const data = await requestGemini(
-    `https://generativelanguage.googleapis.com/v1beta/models/${embeddingModel}:embedContent?key=${geminiKey}`,
-    { content: { parts: [{ text }] }, outputDimensionality: 768 },
-    'Embedding request',
-  );
-  return data.embedding.values;
-};
-
-const generate = async (contents: unknown[], tools?: unknown[]) => {
-  return requestGemini(
-    `https://generativelanguage.googleapis.com/v1beta/models/${chatModel}:generateContent?key=${geminiKey}`,
-    { systemInstruction: { parts: [{ text: CHAT_SYSTEM_PROMPT }] }, contents, tools },
-    'Chat generation request',
-  );
-};
+import { authenticate, corsHeaders, json, toLang, UUID_RE, type Lang } from '../_shared/common.ts';
+import { generateContent, generateEmbedding } from '../_shared/gemini.ts';
+import { buildSystemPrompt, DOCUMENT_NOT_READY_HTML, NO_RESULTS_HTML } from '../_shared/prompts.ts';
 
 const tool = {
   functionDeclarations: [{
@@ -76,30 +19,60 @@ const tool = {
   }],
 };
 
-Deno.serve(async (request: Request) => {
-  if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(req) });
+  if (req.method !== 'POST') return json(req, { error: 'Method not allowed' }, 405);
 
   try {
-    const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-    if (!token) return json({ error: 'Unauthorized' }, 401);
-    const client = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: `Bearer ${token}` } } });
-    const { data: { user }, error: userError } = await client.auth.getUser(token);
-    if (userError || !user) return json({ error: 'Unauthorized' }, 401);
+    const auth = await authenticate(req);
+    if (!auth) return json(req, { error: 'Unauthorized' }, 401);
+    const { user, userClient: client } = auth;
 
-    const { query, sessionId, documentId } = await request.json();
-    if (!query || !sessionId || !documentId) return json({ error: 'query, sessionId and documentId are required' }, 400);
+    let query = '';
+    let sessionId = '';
+    let documentId = '';
+    let lang: Lang = 'es';
+    try {
+      const body = await req.json();
+      query = typeof body.query === 'string' ? body.query.trim().slice(0, 4000) : '';
+      sessionId = typeof body.sessionId === 'string' ? body.sessionId.slice(0, 200) : '';
+      documentId = typeof body.documentId === 'string' ? body.documentId : '';
+      lang = toLang(body.lang);
+    } catch {
+      return json(req, { error: 'Invalid request' }, 400);
+    }
+    if (!query || !sessionId || !documentId) return json(req, { error: 'query, sessionId and documentId are required' }, 400);
+    if (!UUID_RE.test(documentId)) return json(req, { error: 'Document not found' }, 404);
 
-    const { data: document, error: documentError } = await client.from('user_documents').select('id, status, error_message').eq('id', documentId).eq('user_id', user.id).single();
-    if (documentError || !document) return json({ error: 'Document not found' }, 404);
-    if (document.status !== 'ready') return json({ output: DOCUMENT_NOT_READY_HTML, sessionId, status: document.status, error: document.error_message });
-    const { data: session, error: sessionError } = await client.from('chat_sessions').upsert({ id: sessionId, user_id: user.id, document_id: documentId }, { onConflict: 'id' }).select().single();
-    if (sessionError || !session) return json({ error: 'Invalid chat session' }, 400);
+    // RLS: solo devuelve el documento si es de una empresa del usuario.
+    const { data: document } = await client.from('user_documents')
+      .select('id, org_id, status, error_message').eq('id', documentId).maybeSingle();
+    if (!document) return json(req, { error: 'Document not found' }, 404);
+    const { data: isMember } = await client.rpc('is_org_member', { p_org: document.org_id });
+    if (!isMember) return json(req, { error: 'Document not found' }, 404);
+    if (document.status !== 'ready') {
+      return json(req, { output: DOCUMENT_NOT_READY_HTML[lang], sessionId, status: document.status, error: document.error_message });
+    }
+
+    const { data: org } = await client.from('organizations')
+      .select('specialty, assistant_instructions').eq('id', document.org_id).single();
+    if (!org) return json(req, { error: 'Document not found' }, 404);
+    const systemPrompt = buildSystemPrompt(org, lang);
+
+    // La sesión es privada del usuario (RLS) y queda ligada a la empresa del documento.
+    const { data: existing } = await client.from('chat_sessions').select('id, document_id').eq('id', sessionId).maybeSingle();
+    if (existing && existing.document_id !== documentId) return json(req, { error: 'Invalid chat session' }, 400);
+    if (!existing) {
+      const { error: sessionError } = await client.from('chat_sessions')
+        .insert({ id: sessionId, user_id: user.id, document_id: documentId, org_id: document.org_id });
+      if (sessionError) return json(req, { error: 'Invalid chat session' }, 400);
+    }
 
     const { data: history } = await client.from('chat_messages').select('role, content').eq('session_id', sessionId).order('created_at', { ascending: false }).limit(10);
     const contents: any[] = (history || []).reverse().map((message: { role: string; content: string }) => ({ role: message.role === 'assistant' ? 'model' : 'user', parts: [{ text: message.content }] }));
     contents.push({ role: 'user', parts: [{ text: `Documento activo: ${documentId}\nConsulta: ${query}\nDebes usar la herramienta antes de responder.` }] });
 
-    let result = await generate(contents, [tool]);
+    let result = await generateContent(systemPrompt, contents, [tool]);
     let foundResultsInRequest = false;
     for (let attempt = 0; attempt < 3; attempt++) {
       const parts = result.candidates?.[0]?.content?.parts || [];
@@ -110,8 +83,9 @@ Deno.serve(async (request: Request) => {
       for (const part of calls) {
         const args = part.functionCall.args || {};
         const searchText = typeof args.query === 'string' && args.query.trim() ? args.query : query;
-        const vector = await embedding(searchText);
+        const vector = await generateEmbedding(searchText);
         const limit = Math.min(Math.max(Number(args.limit) || 4, 1), 8);
+        // Siempre el documento activo: se ignora el documentId que proponga el modelo.
         const { data: matches, error: matchError } = await client.rpc('match_document_chunks', { query_embedding: vector, requested_document_id: documentId, match_threshold: 0.45, match_count: limit });
         if (matchError) throw matchError;
         if (matches?.length) {
@@ -126,23 +100,23 @@ Deno.serve(async (request: Request) => {
       }
       contents.push({ role: 'model', parts });
       contents.push({ role: 'user', parts: functionParts });
-      result = await generate(contents, [tool]);
+      result = await generateContent(systemPrompt, contents, [tool]);
 
       if (!foundResultsInTurn && !foundResultsInRequest) {
-        return json({ output: NO_RESULTS_HTML, sessionId });
+        return json(req, { output: NO_RESULTS_HTML[lang], sessionId });
       }
     }
 
-    const output = result.candidates?.[0]?.content?.parts?.map((part: any) => part.text || '').join('').trim() || NO_RESULTS_HTML;
-    const html = output.startsWith('<div') ? output : NO_RESULTS_HTML;
+    const output = result.candidates?.[0]?.content?.parts?.map((part: any) => part.text || '').join('').trim() || NO_RESULTS_HTML[lang];
+    const html = output.startsWith('<div') ? output : NO_RESULTS_HTML[lang];
     await client.from('chat_messages').insert([
       { session_id: sessionId, user_id: user.id, role: 'user', content: query },
       { session_id: sessionId, user_id: user.id, role: 'assistant', content: html },
     ]);
-    return json({ output: html, sessionId });
-  } catch (error) {
+    return json(req, { output: html, sessionId });
+  } catch (_error) {
     const referenceId = crypto.randomUUID();
     console.error(`[Chat] request failed reference=${referenceId}`);
-    return json({ error: `Chat request failed; reference=${referenceId}` }, 500);
+    return json(req, { error: `Chat request failed; reference=${referenceId}` }, 500);
   }
 });

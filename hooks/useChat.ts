@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { supabase } from '../services/supabase';
+import { functionErrorBody, getChatHistory, supabase } from '../services/supabase';
+import i18n, { currentLanguage } from '../i18n';
 import type { ChatMessage, DocumentItem } from '../types';
 
 interface UseChatReturn {
@@ -11,6 +12,9 @@ interface UseChatReturn {
   resetChat: () => void;
   clearError: () => void;
 }
+
+const escapeHtml = (value: string): string =>
+  value.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
 
 const CHAT_SESSION_STORAGE_PREFIX = 'pdftechassistant.chatSession';
 
@@ -75,7 +79,18 @@ export const useChat = (userId: string | null = null, documentId: string | null 
     const storedSessionId = window.localStorage.getItem(storageKey);
     if (storedSessionId) {
       setSessionId(storedSessionId);
-      return;
+      // Recupera la conversación guardada (RLS: solo las propias).
+      let cancelled = false;
+      getChatHistory(storedSessionId)
+        .then((history) => {
+          if (!cancelled && activeStorageKeyRef.current === storageKey) {
+            setMessages((prev) => (prev.length ? prev : history));
+          }
+        })
+        .catch(() => undefined);
+      return () => {
+        cancelled = true;
+      };
     }
 
     const newSessionId = `${userId}:${documentId}:${createSessionId()}`;
@@ -131,7 +146,7 @@ export const useChat = (userId: string | null = null, documentId: string | null 
 
     const now = Date.now();
     if (now - lastMessageTimeRef.current < 3000) {
-      setError("Please wait a few seconds before sending another message.");
+      setError(i18n.t('chat.wait'));
       return;
     }
     lastMessageTimeRef.current = now;
@@ -152,12 +167,16 @@ export const useChat = (userId: string | null = null, documentId: string | null 
         query: text,
         sessionId: conversationSessionId,
         documentId: document.id,
+        lang: currentLanguage(),
       };
 
-      const { data, error } = await supabase.functions.invoke('chat-with-document', {
+      const { data, error } = await supabase().functions.invoke('chat-with-document', {
         body: payload,
       });
-      if (error) throw error;
+      if (error) {
+        const body = await functionErrorBody(error);
+        throw new Error(body?.error || error.message);
+      }
       
       const responseText = parseChatResponse(data);
 
@@ -168,9 +187,9 @@ export const useChat = (userId: string | null = null, documentId: string | null 
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(errorMessage);
       
-      const errorResponse: ChatMessage = { 
-        sender: 'bot', 
-        text: `Sorry, I encountered an error: ${errorMessage}. Please try again.` 
+      const errorResponse: ChatMessage = {
+        sender: 'bot',
+        text: escapeHtml(i18n.t('chat.error', { message: errorMessage })),
       };
       setMessages(prev => [...prev.slice(0, -1), errorResponse]);
     } finally {

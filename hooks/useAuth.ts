@@ -1,85 +1,49 @@
 import { useState, useEffect, useCallback } from 'react';
-import { 
-  onAuthStateChanged, 
-  signOut,
-  createUserWithEmailAndPassword,
-} from '../services/supabase';
-import { signInWithEmailAndPassword } from '../services/supabase';
+import { supabase } from '../services/supabase';
 import type { SupabaseUser } from '../types';
+
+// Los enlaces de invitación y recuperación llegan con #type=invite|recovery;
+// se lee antes de que supabase-js limpie la URL.
+const LANDED_TO_SET_PASSWORD = typeof window !== 'undefined' && /type=(invite|recovery)/.test(window.location.hash);
 
 interface UseAuthReturn {
   currentUser: SupabaseUser | null;
   isLoading: boolean;
-  error: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
+  /** Tras abrir una invitación o un enlace de recuperación hay que crear contraseña. */
+  mustSetPassword: boolean;
+  passwordSet: () => void;
   logout: () => Promise<void>;
-  clearError: () => void;
 }
 
 export const useAuth = (): UseAuthReturn => {
   const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [mustSetPassword, setMustSetPassword] = useState(LANDED_TO_SET_PASSWORD);
 
-  // Listen for auth state changes
   useEffect(() => {
-    const { data } = onAuthStateChanged(async (_event, session) => {
-      const user = session?.user || null;
-      setCurrentUser(user);
+    const sb = supabase();
+    sb.auth.getSession().then(({ data }) => {
+      setCurrentUser(data.session?.user ?? null);
       setIsLoading(false);
     });
-    
+    const { data } = sb.auth.onAuthStateChange((event, session) => {
+      setCurrentUser(session?.user ?? null);
+      setIsLoading(false);
+      if (event === 'PASSWORD_RECOVERY') setMustSetPassword(true);
+    });
     return () => data.subscription.unsubscribe();
   }, []);
 
-  const clearError = useCallback(() => setError(null), []);
-
-  const login = useCallback(async (email: string, password: string): Promise<void> => {
-    setError(null);
-    try {
-      const { error } = await signInWithEmailAndPassword(email, password);
-      if (error) throw error;
-    } catch (err: any) {
-      const message = err.message || 'Failed to sign in. Please check your credentials.';
-      setError(message);
-      throw new Error(message);
-    }
-  }, []);
-
-  const register = useCallback(async (email: string, password: string): Promise<void> => {
-    setError(null);
-    try {
-      const { data, error } = await createUserWithEmailAndPassword(email, password);
-      if (error) throw error;
-      if (!data.user) throw new Error('Account creation did not return a user.');
-    } catch (err: any) {
-      const message = err.message || 'Failed to create account. The email might already be in use.';
-      setError(message);
-      throw new Error(message);
-    }
+  const passwordSet = useCallback(() => {
+    setMustSetPassword(false);
+    if (window.location.hash) window.history.replaceState(null, '', window.location.pathname + window.location.search);
   }, []);
 
   const logout = useCallback(async (): Promise<void> => {
-    try {
-      const { error } = await signOut();
-      if (error) throw error;
-    } catch (err: any) {
-      const message = err.message || 'Failed to sign out.';
-      setError(message);
-      throw new Error(message);
-    }
+    await supabase().auth.signOut();
   }, []);
 
-  return {
-    currentUser,
-    isLoading,
-    error,
-    login,
-    register,
-    logout,
-    clearError
-  };
+  return { currentUser, isLoading, mustSetPassword, passwordSet, logout };
 };
 
 export default useAuth;

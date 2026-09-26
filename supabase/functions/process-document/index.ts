@@ -1,84 +1,19 @@
 /// <reference path="../types.d.ts" />
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import pdf from 'npm:pdf-parse@1.1.1';
 import { Buffer } from 'node:buffer';
-import { CHAT_SYSTEM_PROMPT } from '../_shared/prompts.ts';
-import { mapWithConcurrency, retryTransient } from '../_shared/retry.ts';
+import { authenticate, corsHeaders, json, serviceClient, toLang, UUID_RE, type Lang } from '../_shared/common.ts';
+import { generateContent, generateEmbeddingsBatch } from '../_shared/gemini.ts';
+import { buildSystemPrompt, NO_SUMMARY_HTML, summaryInstruction, type OrgProfile } from '../_shared/prompts.ts';
 import { redactSensitiveData } from '../_shared/redaction.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const geminiKey = Deno.env.get('GEMINI_API_KEY')!;
-const admin = createClient(supabaseUrl, serviceKey);
-const embeddingModel = 'gemini-embedding-001';
-const chatModel = 'gemini-3.6-flash';
-
-class GeminiHttpError extends Error {
-  status: number;
-
-  constructor(message: string, status: number) {
-    super(message);
-    this.status = status;
-  }
-}
-
-const requestGemini = async (url: string, body: unknown, label: string): Promise<any> =>
-  retryTransient(async () => {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (!response.ok) {
-      const referenceId = crypto.randomUUID();
-      console.error(`[Gemini] ${label} failed status=${response.status} reference=${referenceId}`);
-      throw new GeminiHttpError(`${label} failed; reference=${referenceId}`, response.status);
-    }
-    return response.json();
-  }, label);
-
-const generateEmbedding = async (text: string): Promise<number[]> => {
-  const data = await requestGemini(
-    `https://generativelanguage.googleapis.com/v1beta/models/${embeddingModel}:embedContent?key=${geminiKey}`,
-    { content: { parts: [{ text }] }, outputDimensionality: 768 },
-    'Embedding request',
-  );
-  return data.embedding.values;
-};
-
-const generateEmbeddingsBatch = async (texts: string[]): Promise<number[][]> => {
-  try {
-    const data = await requestGemini(
-      `https://generativelanguage.googleapis.com/v1beta/models/${embeddingModel}:batchEmbedContents?key=${geminiKey}`,
-      { requests: texts.map((text) => ({
-        model: `models/${embeddingModel}`,
-        content: { parts: [{ text }] },
-        outputDimensionality: 768,
-      })) },
-      'Batch embedding request',
-    );
-    return data.embeddings.map((item: { values: number[] }) => item.values);
-  } catch (error) {
-    console.warn('Batch embeddings unavailable; using limited parallel fallback', error);
-    return mapWithConcurrency(texts, 5, generateEmbedding);
-  }
-};
-
-const generateSummary = async (text: string): Promise<string> => {
-  const data = await requestGemini(
-    `https://generativelanguage.googleapis.com/v1beta/models/${chatModel}:generateContent?key=${geminiKey}`,
-    {
-      systemInstruction: { parts: [{ text: `${CHAT_SYSTEM_PROMPT}\nGenera un resumen técnico HTML inline del documento completo.` }] },
-      contents: [{ role: 'user', parts: [{ text: text.slice(0, 120000) }] }],
-    },
+const generateSummary = async (text: string, org: OrgProfile, lang: Lang): Promise<string> => {
+  const data = await generateContent(
+    `${buildSystemPrompt(org, lang)}\n${summaryInstruction(lang)}`,
+    [{ role: 'user', parts: [{ text: text.slice(0, 120000) }] }],
+    undefined,
     'Summary request',
   );
-  return data.candidates?.[0]?.content?.parts?.map((part: any) => part.text || '').join('').trim() || '<div>No se pudo generar el resumen.</div>';
+  return data.candidates?.[0]?.content?.parts?.map((part: any) => part.text || '').join('').trim() || NO_SUMMARY_HTML[lang];
 };
 
 interface Chunk {
@@ -121,33 +56,58 @@ const splitIntoChunks = (text: string, maxLength = 2500, overlap = 180): Chunk[]
   return chunks;
 };
 
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
-  status,
-  headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-});
+Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(req) });
+  if (req.method !== 'POST') return json(req, { error: 'Method not allowed' }, 405);
 
-Deno.serve(async (request) => {
-  if (request.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
+  const auth = await authenticate(req);
+  if (!auth) return json(req, { error: 'Unauthorized' }, 401);
+  const { user, userClient } = auth;
 
+  let documentId = '';
+  let lang: Lang = 'es';
   try {
-    const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-    if (!token) return json({ error: 'Unauthorized' }, 401);
-    const userClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: `Bearer ${token}` } } });
-    const { data: { user } } = await userClient.auth.getUser(token);
-    if (!user) return json({ error: 'Unauthorized' }, 401);
+    const body = await req.json();
+    documentId = String(body.documentId || '');
+    lang = toLang(body.lang);
+  } catch {
+    return json(req, { error: 'Invalid request' }, 400);
+  }
+  if (!UUID_RE.test(documentId)) return json(req, { error: 'Document not found' }, 404);
 
-    const { documentId } = await request.json();
-    const { data: document, error: documentError } = await admin.from('user_documents').select('id, user_id, storage_path').eq('id', documentId).eq('user_id', user.id).single();
-    if (documentError || !document) return json({ error: 'Document not found' }, 404);
+  const admin = serviceClient();
+  try {
+    // Con el cliente del usuario: RLS solo devuelve documentos de sus empresas.
+    const { data: document } = await userClient.from('user_documents')
+      .select('id, org_id, user_id, storage_path, status').eq('id', documentId).maybeSingle();
+    if (!document) return json(req, { error: 'Document not found' }, 404);
 
-    await admin.from('user_documents').update({ status: 'processing', error_message: null }).eq('id', documentId);
+    // Comprobación explícita de pertenencia a la empresa del documento.
+    const { data: isMember } = await userClient.rpc('is_org_member', { p_org: document.org_id });
+    if (!isMember) return json(req, { error: 'Document not found' }, 404);
+    // Procesa (o reprocesa) quien lo subió o un admin de la empresa.
+    const { data: isAdmin } = await userClient.rpc('is_org_admin', { p_org: document.org_id });
+    if (document.user_id !== user.id && !isAdmin) return json(req, { error: 'Not allowed' }, 403);
+    if (document.status === 'processing' || document.status === 'ready') {
+      return json(req, { success: true, documentId, status: document.status });
+    }
+
+    const { data: org } = await admin.from('organizations')
+      .select('specialty, assistant_instructions').eq('id', document.org_id).single();
+    if (!org) return json(req, { error: 'Document not found' }, 404);
+
+    // Evita dos procesamientos a la vez del mismo documento.
+    const { data: claimed } = await admin.from('user_documents')
+      .update({ status: 'processing', error_message: null })
+      .eq('id', documentId).in('status', ['uploaded', 'error']).select('id');
+    if (!claimed?.length) return json(req, { success: true, documentId, status: 'processing' });
+
     try {
       const { data: file, error: downloadError } = await admin.storage.from('documents').download(document.storage_path);
       if (downloadError || !file) throw downloadError || new Error('Could not download document');
       const buffer = await file.arrayBuffer();
       const parsed = await pdf(Buffer.from(buffer));
+      // Se anonimizan los datos personales antes de indexar o enviar al modelo.
       const text = redactSensitiveData(parsed.text.trim());
       if (!text) throw new Error('No text extracted from PDF');
 
@@ -156,28 +116,43 @@ Deno.serve(async (request) => {
       await admin.from('document_chunks').delete().eq('document_id', documentId);
       const embeddingInputs = chunks.map((chunk) => `[Sección: ${chunk.sectionTitle}] [Documento ${document.storage_path}] ${chunk.content}`);
       const vectors = await generateEmbeddingsBatch(embeddingInputs);
-      for (let index = 0; index < chunks.length; index++) {
-        const chunk = chunks[index];
-        const { error } = await admin.from('document_chunks').insert({ document_id: documentId, user_id: user.id, content: chunk.content, metadata: { Documento: document.storage_path, Titulo: chunk.sectionTitle, Pagina: 0, 'Paragraph Index': chunk.index }, embedding: vectors[index] });
+      const rows = chunks.map((chunk, index) => ({
+        document_id: documentId,
+        org_id: document.org_id,
+        user_id: document.user_id,
+        content: chunk.content,
+        metadata: { Documento: document.storage_path, Titulo: chunk.sectionTitle, Pagina: 0, 'Paragraph Index': chunk.index },
+        embedding: vectors[index],
+      }));
+      for (let start = 0; start < rows.length; start += 50) {
+        const { error } = await admin.from('document_chunks').insert(rows.slice(start, start + 50));
         if (error) throw error;
       }
 
-      const summary = await generateSummary(text);
-      const { error: summaryError } = await admin.from('summaries').upsert({ document_id: documentId, user_id: user.id, content: summary, updated_at: new Date().toISOString() });
+      const summary = await generateSummary(text, org, lang);
+      const { error: summaryError } = await admin.from('summaries').upsert({
+        document_id: documentId,
+        org_id: document.org_id,
+        user_id: document.user_id,
+        content: summary,
+        updated_at: new Date().toISOString(),
+      });
       if (summaryError) throw summaryError;
       await admin.from('user_documents').update({ status: 'ready' }).eq('id', documentId);
-      return json({ success: true, documentId });
-    } catch (error) {
+      return json(req, { success: true, documentId, status: 'ready' });
+    } catch (_error) {
       const referenceId = crypto.randomUUID();
       console.error(`[Process] document processing failed reference=${referenceId}`);
       const { error: cleanupError } = await admin.from('document_chunks').delete().eq('document_id', documentId);
       if (cleanupError) console.error('Failed to clean partial document chunks:', cleanupError);
       const safeMessage = `Document processing failed; reference=${referenceId}`;
       await admin.from('user_documents').update({ status: 'error', error_message: safeMessage }).eq('id', documentId);
-      await admin.from('processing_errors').insert({ document_id: documentId, user_id: user.id, error: safeMessage });
-      return json({ error: safeMessage }, 500);
+      await admin.from('processing_errors').insert({ document_id: documentId, org_id: document.org_id, user_id: user.id, error: safeMessage });
+      return json(req, { error: safeMessage }, 500);
     }
-  } catch (error) {
-    return json({ error: error instanceof Error ? error.message : 'Internal server error' }, 500);
+  } catch (_error) {
+    const referenceId = crypto.randomUUID();
+    console.error(`[Process] request failed reference=${referenceId}`);
+    return json(req, { error: `Internal server error; reference=${referenceId}` }, 500);
   }
 });
