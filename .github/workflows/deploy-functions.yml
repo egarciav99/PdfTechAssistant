@@ -1,0 +1,71 @@
+name: Desplegar Edge Functions
+
+# Despliega las Edge Functions a Supabase cuando cambian en main, o a mano
+# desde Actions → "Desplegar Edge Functions" → Run workflow.
+#
+# Configuración (Settings → Secrets and variables → Actions):
+#   Secrets:   SUPABASE_ACCESS_TOKEN (obligatorio), GEMINI_API_KEY (opcional)
+#   Variables: SUPABASE_PROJECT_REF (obligatorio), PDF_APP_URL y PDF_ALLOWED_ORIGINS (opcionales)
+# Los opcionales solo se envían a Supabase si están definidos.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+      - '.github/workflows/deploy-functions.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-functions
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Comprobar configuración
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "::error::Falta el secreto SUPABASE_ACCESS_TOKEN (Settings → Secrets and variables → Actions → Secrets)."
+            exit 1
+          fi
+          if [ -z "$PROJECT_REF" ]; then
+            echo "::error::Falta la variable SUPABASE_PROJECT_REF (Settings → Secrets and variables → Actions → Variables)."
+            exit 1
+          fi
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Secretos de las funciones
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PDF_APP_URL: ${{ vars.PDF_APP_URL }}
+          PDF_ALLOWED_ORIGINS: ${{ vars.PDF_ALLOWED_ORIGINS }}
+        run: |
+          args=()
+          [ -n "$GEMINI_API_KEY" ] && args+=("GEMINI_API_KEY=$GEMINI_API_KEY")
+          [ -n "$PDF_APP_URL" ] && args+=("PDF_APP_URL=$PDF_APP_URL")
+          [ -n "$PDF_ALLOWED_ORIGINS" ] && args+=("PDF_ALLOWED_ORIGINS=$PDF_ALLOWED_ORIGINS")
+          if [ ${#args[@]} -gt 0 ]; then
+            supabase secrets set --project-ref "$PROJECT_REF" "${args[@]}"
+          else
+            echo "No hay secretos opcionales definidos en GitHub: se mantienen los que ya tiene Supabase."
+          fi
+
+      - name: Desplegar funciones
+        run: |
+          for fn in process-document chat-with-document manage-members; do
+            echo "Desplegando $fn..."
+            supabase functions deploy "$fn" --project-ref "$PROJECT_REF" --use-api
+          done
+
+      - name: Resultado
+        run: supabase functions list --project-ref "$PROJECT_REF"
