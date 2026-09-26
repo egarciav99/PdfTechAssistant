@@ -1,11 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock environment variables before importing hooks
-vi.mock('../../constants', () => ({
-  SUPABASE_CONFIG: {
-    url: 'https://test-project.supabase.co',
-    anonKey: 'test-anon-key'
-  }
+// Sin backend: se simula el servicio de Supabase.
+vi.mock('../../services/supabase', () => ({
+  supabase: () => ({ functions: { invoke: vi.fn() } }),
+  getChatHistory: vi.fn().mockResolvedValue([]),
+  functionErrorBody: vi.fn().mockResolvedValue(null),
 }));
 
 import { renderHook, act } from '@testing-library/react';

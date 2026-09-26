@@ -1,71 +1,67 @@
-import React, { useState, useCallback } from 'react';
-import { useAuth, useDocuments, useChat } from './hooks';
-import type { AppState, SummaryData, DocumentItem } from './types';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useAuth, useDocuments, useChat, useOrgs } from './hooks';
+import type { AppState, SummaryData, DocumentItem, SupabaseUser } from './types';
+import { isConfigured } from './config';
 import UploadSection from './components/UploadSection';
 import SummarySection from './components/SummarySection';
 import ChatSection from './components/ChatSection';
 import Loader from './components/Loader';
-import Login from './components/Login';
-import Register from './components/Register';
 import DocumentList from './components/DocumentList';
-import { FileTextIcon, LogOutIcon } from './components/IconComponents';
+import LanguageSwitcher from './components/LanguageSwitcher';
+import { LoginScreen, NotConfiguredScreen, SetPasswordScreen, AuthLayout } from './components/AuthScreens';
+import { MembersPanel } from './components/admin/MembersPanel';
+import { OrgsPanel } from './components/admin/OrgsPanel';
+import { BuildingIcon, FileTextIcon, LogOutIcon, UsersIcon } from './components/IconComponents';
 import CreatedBy from './components/CreatedBy';
 
 const App: React.FC = () => {
-  // Views: 'dashboard', 'uploading', 'chat', 'view-summary'
+  if (!isConfigured()) return <NotConfiguredScreen />;
+  return <AuthenticatedApp />;
+};
+
+const AuthenticatedApp: React.FC = () => {
+  const { t } = useTranslation();
+  const { currentUser, isLoading, mustSetPassword, passwordSet, logout } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader text={t('common.loading')} />
+      </div>
+    );
+  }
+  if (currentUser && mustSetPassword) return <SetPasswordScreen onDone={passwordSet} />;
+  if (!currentUser) return <LoginScreen />;
+  return <Workspace user={currentUser} onSignOut={logout} />;
+};
+
+const BackButton: React.FC<{ onClick: () => void }> = ({ onClick }) => {
+  const { t } = useTranslation();
+  return (
+    <button onClick={onClick} className="mb-4 text-sm text-blue-600 hover:underline flex items-center gap-1" id="btn-back">
+      <span aria-hidden="true">←</span> {t('common.back')}
+    </button>
+  );
+};
+
+const Workspace: React.FC<{ user: SupabaseUser; onSignOut: () => Promise<void> }> = ({ user, onSignOut }) => {
+  const { t, i18n } = useTranslation();
+  const orgs = useOrgs(user.id);
+  const { currentOrg, role, isSuperadmin } = orgs;
+  const isAdmin = role === 'admin';
+
   const [view, setView] = useState<AppState>('dashboard');
-  
-  // Data
   const [activeDocument, setActiveDocument] = useState<DocumentItem | null>(null);
-  
-  // Summary State
   const [fetchedSummary, setFetchedSummary] = useState<string | null>(null);
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
-  
-  // UI State
   const [showUploadView, setShowUploadView] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [authView, setAuthView] = useState<'login' | 'register'>('login');
+  const [panel, setPanel] = useState<'members' | 'orgs' | null>(null);
 
-  // Custom Hooks
-  const { 
-    currentUser, 
-    isLoading: isAuthLoading, 
-    error: authError,
-    login, 
-    register, 
-    logout,
-    clearError: clearAuthError 
-  } = useAuth();
-  
-  const { 
-    documents, 
-    isLoading: isDocLoading,
-    error: docError,
-    uploadDocument, 
-    deleteDocument,
-    fetchSummary,
-    clearError: clearDocError 
-  } = useDocuments(currentUser?.id || null);
-  
-  const { 
-    messages, 
-    isLoading: isChatLoading,
-    error: chatError,
-    sendMessage, 
-    clearError: clearChatError
-  } = useChat(currentUser?.id || null, activeDocument?.id || null);
+  const docs = useDocuments(currentOrg?.id ?? null, user.id);
+  const chat = useChat(user.id, activeDocument?.id ?? null);
 
-  // Aggregate errors
-  const globalError = authError || docError || chatError;
-  const clearGlobalError = useCallback(() => {
-    if (authError) clearAuthError();
-    if (docError) clearDocError();
-    if (chatError) clearChatError();
-  }, [authError, docError, chatError, clearAuthError, clearDocError, clearChatError]);
-
-  // --- Handlers ---
-  
   const handleBackToDashboard = useCallback(() => {
     setView('dashboard');
     setActiveDocument(null);
@@ -74,42 +70,33 @@ const App: React.FC = () => {
     setShowUploadView(false);
   }, []);
 
-  const handleFileSelect = useCallback((file: File | null) => {
-    setSelectedFile(file);
-  }, []);
+  // Al cambiar de empresa se vuelve a la lista de documentos.
+  useEffect(() => {
+    handleBackToDashboard();
+  }, [currentOrg?.id, handleBackToDashboard]);
 
   const handleStartUpload = useCallback(async () => {
-    if (!selectedFile || !currentUser || isDocLoading) return;
-    
+    if (!selectedFile || docs.isLoading) return;
     setView('uploading');
-
     try {
-      await uploadDocument(selectedFile, currentUser.id);
+      await docs.uploadDocument(selectedFile);
       setSelectedFile(null);
-      setView('dashboard');
-    } catch (err) {
-      // Error is handled in the hook, just reset view
+      setShowUploadView(false);
+    } catch {
+      // El error se muestra en el aviso general.
+    } finally {
       setView('dashboard');
     }
-  }, [selectedFile, currentUser, uploadDocument]);
-
-  const handleSignOut = useCallback(async () => {
-    await logout();
-    setActiveDocument(null);
-    setView('dashboard');
-  }, [logout]);
+  }, [selectedFile, docs]);
 
   const handleDeleteDocument = useCallback(async (doc: DocumentItem) => {
-    if (!currentUser) return;
     try {
-      await deleteDocument(doc, currentUser.id);
-      if (activeDocument?.id === doc.id) {
-        handleBackToDashboard();
-      }
-    } catch (err) {
-      // Error handled in hook and displayed by global error banner
+      await docs.deleteDocument(doc);
+      if (activeDocument?.id === doc.id) handleBackToDashboard();
+    } catch {
+      // El error se muestra en el aviso general.
     }
-  }, [currentUser, deleteDocument, activeDocument, handleBackToDashboard]);
+  }, [docs, activeDocument, handleBackToDashboard]);
 
   const handleSelectChat = useCallback((doc: DocumentItem) => {
     setActiveDocument(doc);
@@ -121,196 +108,201 @@ const App: React.FC = () => {
     setView('view-summary');
     setIsSummaryLoading(true);
     setFetchedSummary(null);
-    
     try {
-      const summaryDoc = await fetchSummary(doc.id);
-      if (summaryDoc && summaryDoc.resumen) {
-        setFetchedSummary(summaryDoc.resumen);
-      }
+      const summaryDoc = await docs.fetchSummary(doc.id);
+      if (summaryDoc?.resumen) setFetchedSummary(summaryDoc.resumen);
     } finally {
       setIsSummaryLoading(false);
     }
-  }, [fetchSummary]);
-
-  // handleBackToDashboard moved up for dependency resolution
+  }, [docs]);
 
   const handleSendChatMessage = useCallback(async (query: string) => {
-    if (!activeDocument || !currentUser) return;
-    await sendMessage(query, activeDocument, currentUser.id);
-  }, [activeDocument, currentUser, sendMessage]);
+    if (!activeDocument) return;
+    await chat.sendMessage(query, activeDocument, user.id);
+  }, [activeDocument, chat, user.id]);
 
-  // --- Render Helpers ---
+  const globalError = docs.error ? t(docs.error) : chat.error;
+  const clearGlobalError = () => {
+    docs.clearError();
+    chat.clearError();
+  };
 
-  if (isAuthLoading) {
+  if (orgs.isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader text="Initializing..." />
+        <Loader text={t('common.loading')} />
       </div>
     );
   }
 
-  if (!currentUser) {
+  // Sin empresa y sin ser superadmin: no hay nada que mostrar.
+  if (!currentOrg && !isSuperadmin) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
-        {authView === 'login' ? (
-          <Login onSwitchToRegister={() => setAuthView('register')} />
-        ) : (
-          <Register onSwitchToLogin={() => setAuthView('login')} />
-        )}
-        <CreatedBy className="mt-6" />
-      </div>
+      <AuthLayout>
+        <div className="w-full max-w-sm bg-white border border-gray-200 rounded-2xl shadow-sm p-6 text-center" role="alert">
+          <h2 className="text-lg font-bold text-gray-800 mb-2">{t('org.noOrgsTitle')}</h2>
+          <p className="text-sm text-gray-600 mb-4">{orgs.error || t('org.noOrgsBody')}</p>
+          <button onClick={onSignOut} className="text-sm text-blue-700 hover:underline">{t('auth.signOut')}</button>
+        </div>
+      </AuthLayout>
     );
   }
 
   const renderContent = () => {
-    if (view === 'uploading') {
-      return <Loader text="Uploading and initializing analysis..." />;
+    if (!currentOrg) {
+      return <p className="text-gray-500 text-center py-12">{t('orgs.empty')}</p>;
     }
+
+    if (view === 'uploading') return <Loader text={t('upload.uploading')} />;
 
     if (view === 'chat' && activeDocument) {
       return (
         <div>
-          <button 
-            onClick={handleBackToDashboard} 
-            className="mb-4 text-sm text-blue-600 hover:underline flex items-center gap-1"
-          >
-            <span>←</span> Back to Dashboard
-          </button>
+          <BackButton onClick={handleBackToDashboard} />
           <div className="bg-blue-50 p-3 sm:p-4 rounded-lg mb-4 border border-blue-100">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-800 break-words">
-              {activeDocument.nombreDocumento}
-            </h2>
-            <span className="text-xs text-gray-500">ID: {activeDocument.id}</span>
+            <h2 className="text-lg sm:text-xl font-bold text-gray-800 break-words">{activeDocument.nombreDocumento}</h2>
           </div>
-          <ChatSection 
-            documentId={activeDocument.nombreDocumento} 
-            messages={messages} 
-            onSendMessage={handleSendChatMessage} 
+          <ChatSection
+            documentId={activeDocument.nombreDocumento}
+            messages={chat.messages}
+            onSendMessage={handleSendChatMessage}
+            onNewChat={chat.resetChat}
+            isLoading={chat.isLoading}
           />
         </div>
       );
     }
 
     if (view === 'view-summary' && activeDocument) {
-      if (isSummaryLoading) {
-        return <Loader text="Fetching summary from database..." />;
-      }
+      if (isSummaryLoading) return <Loader text={t('summary.fetching')} />;
 
-      let summaryToRender: SummaryData = {};
+      const header = (
+        <>
+          <BackButton onClick={handleBackToDashboard} />
+          <div className="mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-1 break-words">{activeDocument.nombreDocumento}</h2>
+            <span className="text-xs text-gray-500">
+              {t('summary.uploadedAt', { date: new Date(activeDocument.createdAt).toLocaleString(i18n.resolvedLanguage) })}
+            </span>
+          </div>
+        </>
+      );
 
-      if (fetchedSummary) {
-        summaryToRender = { "Document Analysis": fetchedSummary };
-      } else if (activeDocument.resumen && activeDocument.resumen.trim().length > 0) {
-        summaryToRender = { "Cached Analysis": activeDocument.resumen };
-      } else if (typeof activeDocument.summary === 'string' && activeDocument.summary.trim().length > 0) {
-        summaryToRender = { "Legacy Summary": activeDocument.summary };
-      } else if (typeof activeDocument.summary === 'object' && activeDocument.summary !== null) {
-        summaryToRender = activeDocument.summary;
-      } else {
+      if (!fetchedSummary) {
         return (
           <div>
-            <button 
-              onClick={handleBackToDashboard} 
-              className="mb-4 text-sm text-blue-600 hover:underline flex items-center gap-1"
-            >
-              <span>←</span> Back to Dashboard
-            </button>
+            {header}
             <div className="p-8 sm:p-12 text-center bg-white rounded-lg border border-gray-200">
-              <p className="text-gray-500 text-lg mb-4">Summary not ready yet.</p>
-              <p className="text-gray-400 text-sm mb-4">
-                The AI is still processing this document or it hasn't been generated.
-              </p>
-              <button 
-                onClick={() => handleSelectSummary(activeDocument)}
-                className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition"
-              >
-                Refresh
+              <p className="text-gray-500 text-lg mb-4">{t('summary.notReady')}</p>
+              <p className="text-gray-400 text-sm mb-4">{t('summary.notReadyHint')}</p>
+              <button onClick={() => handleSelectSummary(activeDocument)} className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition">
+                {t('common.refresh')}
               </button>
             </div>
           </div>
         );
       }
 
+      const summaryToRender: SummaryData = { summary: fetchedSummary };
       return (
         <div>
-          <button 
-            onClick={handleBackToDashboard} 
-            className="mb-4 text-sm text-blue-600 hover:underline flex items-center gap-1"
-          >
-            <span>←</span> Back to Dashboard
-          </button>
-          <div className="mb-4 sm:mb-6">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-1 break-words">
-              {activeDocument.nombreDocumento}
-            </h2>
-            <span className="text-xs text-gray-500">
-              Uploaded: {new Date(activeDocument.createdAt).toLocaleString()}
-            </span>
-          </div>
+          {header}
           <SummarySection summary={summaryToRender} />
         </div>
       );
     }
 
-    // Default: Dashboard
-    if (isDocLoading) return <Loader text="Processing..." />;
-    
-    if (view === 'dashboard' && showUploadView) {
+    if (docs.isLoading && docs.documents.length === 0) return <Loader text={t('common.loading')} />;
+
+    if (showUploadView) {
       return (
         <div className="max-w-2xl mx-auto">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-800">Upload Document</h2>
-            <button 
-              onClick={() => {
-                setSelectedFile(null);
-                setShowUploadView(false);
-              }} 
-              className="text-gray-400 hover:text-gray-600 text-sm"
-            >
-              ✕ Cancel
+            <h2 className="text-lg sm:text-xl font-bold text-gray-800">{t('upload.title')}</h2>
+            <button onClick={() => { setSelectedFile(null); setShowUploadView(false); }} className="text-gray-400 hover:text-gray-600 text-sm">
+              ✕ {t('common.cancel')}
             </button>
           </div>
-          <UploadSection 
-            onFileSelect={handleFileSelect}
+          <UploadSection
+            onFileSelect={setSelectedFile}
             onUpload={handleStartUpload}
             selectedFile={selectedFile}
             error={null}
-            isUploading={isDocLoading}
+            isUploading={docs.isLoading}
           />
         </div>
       );
     }
 
     return (
-      <DocumentList 
-        documents={documents} 
+      <DocumentList
+        documents={docs.documents}
+        currentUserId={user.id}
+        isAdmin={isAdmin}
         onSelectChat={handleSelectChat}
         onSelectSummary={handleSelectSummary}
-        onUploadNew={() => setShowUploadView(true)} 
+        onUploadNew={() => setShowUploadView(true)}
         onDelete={handleDeleteDocument}
+        onRetry={docs.retryDocument}
+        onRefresh={docs.reload}
       />
     );
   };
 
+  const orgCount = orgs.access?.orgs.length ?? 0;
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
       <header className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 py-3 sm:py-4 flex justify-between items-center">
-          <div 
-            className="flex items-center gap-2 cursor-pointer" 
-            onClick={handleBackToDashboard}
-          >
-            <FileTextIcon className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
-            <h1 className="text-lg sm:text-xl font-bold text-gray-800">PDF Assistant</h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500 hidden md:block">{currentUser.email}</span>
-            <button 
-              onClick={handleSignOut}
-              className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm"
-            >
+        <div className="max-w-5xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
+          <button type="button" className="flex items-center gap-3 min-w-0 text-left" onClick={handleBackToDashboard}>
+            {currentOrg?.logo_url
+              ? <img src={currentOrg.logo_url} alt="" className="h-8 sm:h-10 max-w-[120px] object-contain" id="org-logo" />
+              : <FileTextIcon className="w-7 h-7 sm:w-8 sm:h-8 text-blue-600 flex-shrink-0" />}
+            <span className="min-w-0">
+              <span className="block text-base sm:text-lg font-bold text-gray-800 truncate" id="org-name-header">
+                {currentOrg?.name || t('app.name')}
+              </span>
+              {currentOrg && (
+                <span className="block text-xs text-gray-500 truncate" id="org-tagline">
+                  {t('app.tagline', { specialty: t(`specialties.${currentOrg.specialty}`) })}
+                </span>
+              )}
+            </span>
+          </button>
+
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            {orgCount > 1 && currentOrg && (
+              <select
+                value={currentOrg.id}
+                onChange={(e) => orgs.selectOrg(e.target.value)}
+                aria-label={t('org.switchLabel')}
+                id="org-switcher"
+                className="max-w-[180px] border border-gray-200 rounded-md px-2 py-1 text-sm"
+              >
+                {orgs.access?.orgs.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+              </select>
+            )}
+            {isSuperadmin && (
+              <button onClick={() => setPanel('orgs')} id="btn-orgs" className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg">
+                <BuildingIcon className="w-4 h-4" /> <span className="hidden sm:inline">{t('org.companies')}</span>
+              </button>
+            )}
+            {isAdmin && currentOrg && (
+              <button onClick={() => setPanel('members')} id="btn-members" className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg">
+                <UsersIcon className="w-4 h-4" /> <span className="hidden sm:inline">{t('org.users')}</span>
+              </button>
+            )}
+            <LanguageSwitcher />
+            <span className="text-sm text-gray-500 hidden md:flex items-center gap-2">
+              {user.email}
+              <span className="text-[11px] font-semibold uppercase tracking-wide bg-gray-100 text-gray-600 rounded px-1.5 py-0.5" id="role-badge">
+                {isSuperadmin ? t('roles.superadmin') : role ? t(`roles.${role}`) : ''}
+              </span>
+            </span>
+            <button onClick={onSignOut} id="btn-signout" className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm">
               <LogOutIcon className="w-5 h-5 sm:w-4 sm:h-4" />
-              <span className="hidden sm:inline">Sign Out</span>
+              <span className="hidden sm:inline">{t('auth.signOut')}</span>
             </button>
           </div>
         </div>
@@ -318,30 +310,39 @@ const App: React.FC = () => {
 
       <main className="flex-grow w-full max-w-5xl mx-auto p-3 sm:p-6 md:p-8">
         {globalError && (
-          <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg shadow-sm flex justify-between items-start">
-            <div className="flex items-center">
-              <span className="text-red-500 mr-2">⚠️</span>
-              <p className="text-sm text-red-700">{globalError}</p>
-            </div>
-            <button 
-              onClick={clearGlobalError}
-              className="text-red-400 hover:text-red-600 focus:outline-none"
-            >
-              ✕
-            </button>
+          <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg shadow-sm flex justify-between items-start" role="alert">
+            <p className="text-sm text-red-700">{globalError}</p>
+            <button onClick={clearGlobalError} className="text-red-400 hover:text-red-600 focus:outline-none" aria-label={t('common.dismiss')}>✕</button>
           </div>
         )}
-        
-        <div className={`bg-white rounded-xl shadow-lg p-4 sm:p-6 md:p-8 min-h-[500px] transition-all ${view === 'dashboard' ? '' : 'ring-1 ring-black/5'}`}>
-          {view !== 'dashboard' && renderContent()}
-          {view === 'dashboard' && renderContent()}
+
+        <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 md:p-8 min-h-[500px]">
+          {renderContent()}
         </div>
       </main>
 
       <footer className="text-center py-6 text-gray-400 text-xs sm:text-sm">
-        <p>Powered by React, Supabase & Gemini</p>
+        <p>{t('app.poweredBy')}</p>
         <CreatedBy className="mt-1" />
       </footer>
+
+      {panel === 'members' && currentOrg && (
+        <MembersPanel
+          key={currentOrg.id}
+          org={currentOrg}
+          currentUserId={user.id}
+          onClose={() => setPanel(null)}
+          onOrgChanged={() => orgs.refresh(currentOrg.id)}
+        />
+      )}
+      {panel === 'orgs' && orgs.access && (
+        <OrgsPanel
+          orgs={orgs.access.orgs}
+          onClose={() => setPanel(null)}
+          onCreated={(id) => { setPanel(null); orgs.refresh(id); }}
+          onOpen={(id) => { setPanel(null); orgs.selectOrg(id); }}
+        />
+      )}
     </div>
   );
 };

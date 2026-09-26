@@ -93,3 +93,7 @@ dist-ssr/
 
 # Espejo local de npm para entornos con proxy (solo desarrollo)
 supabase/functions/.npmrc
+
+# Resultados de Playwright
+test-results/
+playwright-report/

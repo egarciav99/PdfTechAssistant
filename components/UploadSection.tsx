@@ -1,5 +1,6 @@
 
 import React, { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { UploadCloudIcon } from './IconComponents';
 
 interface UploadSectionProps {
@@ -11,6 +12,7 @@ interface UploadSectionProps {
 }
 
 const UploadSection: React.FC<UploadSectionProps> = ({ onFileSelect, onUpload, selectedFile, error, isUploading }) => {
+  const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -42,13 +44,13 @@ const UploadSection: React.FC<UploadSectionProps> = ({ onFileSelect, onUpload, s
       >
         <UploadCloudIcon className="w-12 h-12 text-gray-400 mb-4" />
         <p className="text-lg text-gray-700 font-semibold">
-          {selectedFile ? selectedFile.name : 'Drag & drop a PDF file here'}
+          {selectedFile ? selectedFile.name : t('upload.drop')}
         </p>
-        <p className="text-sm text-gray-500">or click to browse</p>
+        <p className="text-sm text-gray-500">{t('upload.browse')}</p>
         <input
           id="pdf-upload"
           type="file"
-          accept=".pdf"
+          accept="application/pdf,.pdf"
           className="hidden"
           ref={fileInputRef}
           onChange={handleFileChange}
@@ -56,12 +58,14 @@ const UploadSection: React.FC<UploadSectionProps> = ({ onFileSelect, onUpload, s
         />
       </label>
       {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
+      <p className="text-xs text-gray-400 mt-3 text-center">{t('upload.privacy')}</p>
       <button
         onClick={onUpload}
+        id="btn-upload"
         disabled={!selectedFile || isUploading}
         className="mt-6 w-full sm:w-auto px-8 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all transform hover:scale-105"
       >
-        {isUploading ? 'Processing Document...' : 'Upload and Analyze Document'}
+        {isUploading ? t('upload.uploading') : t('upload.button')}
       </button>
     </div>
   );

@@ -1,4 +1,3 @@
-
 import type { User } from '@supabase/supabase-js';
 
 export type AppState = 'dashboard' | 'uploading' | 'chat' | 'view-summary' | 'error';
@@ -13,13 +12,17 @@ export interface ChatMessage {
 }
 
 export interface DocumentItem {
-  id: string; // "01", "02", etc.
+  id: string;
+  /** Empresa a la que pertenece el documento. */
+  orgId?: string;
+  /** Usuario que lo subió. */
+  uploadedBy?: string;
   nombreDocumento: string;
   storageId: string;
-  // summary y resumen ya no son obligatorios aquí porque viven en otra colección, 
+  // summary y resumen ya no son obligatorios aquí porque viven en otra colección,
   // pero los mantenemos opcionales por compatibilidad con datos viejos si es necesario.
-  summary?: string | SummaryData; 
-  resumen?: string; 
+  summary?: string | SummaryData;
+  resumen?: string;
   createdAt: number;
   status?: 'uploaded' | 'processing' | 'ready' | 'error';
 }
