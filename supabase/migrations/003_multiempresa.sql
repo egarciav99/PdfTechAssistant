@@ -119,26 +119,28 @@ alter table public.processing_errors add column if not exists org_id uuid refere
 -- ── Migración de datos: cada dueño actual recibe su empresa "personal" ──
 -- Se crea para todo usuario con documentos o conversaciones. Su especialidad
 -- es 'electrical' para conservar el comportamiento que tenía la app.
-drop table if exists pg_temp._legacy_owners;
-create temporary table _legacy_owners as
-  select user_id from public.user_documents
-  union
-  select user_id from public.chat_sessions;
-
+-- Sin tablas temporales: el SQL Editor de Supabase no las conserva entre sentencias.
 insert into public.organizations (name, slug, specialty)
 select left('Personal · ' || coalesce(u.email, o.user_id::text), 120),
        'personal-' || replace(o.user_id::text, '-', ''),
        'electrical'
-from _legacy_owners o join auth.users u on u.id = o.user_id
+from (
+  select user_id from public.user_documents
+  union
+  select user_id from public.chat_sessions
+) o
+join auth.users u on u.id = o.user_id
 on conflict (slug) do nothing;
 
 insert into public.memberships (org_id, user_id, role)
 select org.id, o.user_id, 'admin'
-from _legacy_owners o
+from (
+  select user_id from public.user_documents
+  union
+  select user_id from public.chat_sessions
+) o
 join public.organizations org on org.slug = 'personal-' || replace(o.user_id::text, '-', '')
 on conflict do nothing;
-
-drop table _legacy_owners;
 
 update public.user_documents d set org_id = o.id
 from public.organizations o
