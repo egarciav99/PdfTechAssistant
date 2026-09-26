@@ -1,4 +1,4 @@
-# PDF Technical Assistant — cómo se entrega a una empresa
+# PDF Technical Assistant · cómo se entrega a una empresa
 
 PDF Technical Assistant es un asistente para documentación técnica. La empresa sube sus PDF (especificaciones, memorias, catálogos...). La app los resume y responde preguntas citando solo lo que dicen los documentos. Cada empresa tiene su **especialidad** (eléctrica, civil, mecánica, hidrosanitaria, arquitectura o general), que decide en qué se centra el asistente, además de su **nombre** y su **logo**.
 
