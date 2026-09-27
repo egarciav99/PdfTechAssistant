@@ -16,13 +16,16 @@ const escapeHtml = (value: string): string =>
 
 /** Demo pública sin login: preguntas sobre un documento de ejemplo, con límite diario. */
 const DemoPage: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [info, setInfo] = useState<DemoInfo | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [left, setLeft] = useState(0);
   const [busy, setBusy] = useState(false);
 
+  const [asked, setAsked] = useState<string[]>([]);
+
+  // Se recarga al cambiar de idioma: el título y las sugerencias vienen en el idioma de la interfaz.
   useEffect(() => {
     getDemoInfo()
       .then((data) => {
@@ -30,11 +33,12 @@ const DemoPage: React.FC = () => {
         setLeft(data.questionsLeft ?? 0);
       })
       .catch(() => setLoadError(true));
-  }, []);
+  }, [i18n.resolvedLanguage]);
 
   const send = async (query: string) => {
     if (busy || left <= 0) return;
     setBusy(true);
+    setAsked((prev) => [...prev, query]);
     setMessages((prev) => [...prev, { sender: 'user', text: query }, { sender: 'bot', text: '...' }]);
     try {
       const data = await askDemo(query);
@@ -65,8 +69,9 @@ const DemoPage: React.FC = () => {
 
       <main className="max-w-4xl mx-auto px-4 py-6 sm:py-8 space-y-6">
         <section>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-800 mb-2">{t('demo.title')}</h1>
-          <p className="text-gray-600">{t('demo.intro')}</p>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-800 mb-2">{t('demo.title', { name: t('app.name') })}</h1>
+          <p className="text-gray-700">{t('demo.intro')}</p>
+          <p className="text-gray-600 mt-2">{t('demo.howTo')}</p>
         </section>
 
         {!info && !loadError && <div className="py-12 flex justify-center"><Loader text={t('common.loading')} /></div>}
@@ -78,9 +83,27 @@ const DemoPage: React.FC = () => {
         {info?.available && info.document && (
           <>
             <p className="text-sm text-gray-500">
-              {t('demo.document')}: <strong className="text-gray-700">{info.document.name}</strong>
+              {t('demo.document')}: <strong className="text-gray-700">{info.document.title || info.document.name}</strong>
             </p>
             {info.document.summary && <SummarySection summary={{ resumen: info.document.summary }} />}
+            {left > 0 && (info.suggestions ?? []).some((q) => !asked.includes(q)) && (
+              <div>
+                <p className="text-sm font-semibold text-gray-700 mb-2">{t('demo.suggestionsTitle')}</p>
+                <div className="flex flex-wrap gap-2">
+                  {(info.suggestions ?? []).filter((q) => !asked.includes(q)).map((q) => (
+                    <button
+                      key={q}
+                      type="button"
+                      disabled={busy}
+                      onClick={() => send(q)}
+                      className="text-left text-sm px-3 py-2 rounded-lg border border-blue-200 bg-white text-blue-800 hover:bg-blue-50 disabled:opacity-60"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <ChatSection
               documentId="demo"
               messages={messages}

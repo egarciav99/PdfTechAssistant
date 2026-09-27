@@ -176,8 +176,8 @@
   },
   "demo": {
     "badge": "Demo",
-    "title": "Try the assistant with a real document",
-    "intro": "This technical document is already loaded. Ask it questions: the assistant answers only with what the document says and tells you when it cannot find something. No account needed.",
+    "title": "Try {{name}}",
+    "intro": "It is an AI assistant for technical documentation: each company uploads its PDFs (specifications, standards, manuals) and asks them questions in plain language.",
     "document": "Sample document",
     "unavailable": "The demo is not available right now. Please try again later.",
     "questionsLeft_one": "You have {{count}} question left today.",
@@ -190,6 +190,8 @@
     "ctaTitle": "Want it with your company's documents?",
     "ctaText": "Each company gets its own private space, users and specialty. As a service or installed on your servers.",
     "ctaButton": "Let's talk",
-    "loginLink": "No account? Try the demo"
+    "loginLink": "No account? Try the demo",
+    "howTo": "A real document is already loaded here. Pick a suggested question or write your own: the answer comes only from the document, and if it is not there, it tells you. No account needed.",
+    "suggestionsTitle": "Try one of these questions:"
   }
 }

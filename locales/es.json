@@ -176,8 +176,8 @@
   },
   "demo": {
     "badge": "Demo",
-    "title": "Prueba el asistente con un documento real",
-    "intro": "Este documento técnico ya está cargado. Hazle preguntas: el asistente responde solo con lo que dice el documento y, si no lo encuentra, te lo dice. No hace falta cuenta.",
+    "title": "Prueba el {{name}}",
+    "intro": "Es un asistente con IA para documentación técnica: cada empresa sube sus PDF (especificaciones, normas, manuales) y les pregunta en lenguaje normal.",
     "document": "Documento de ejemplo",
     "unavailable": "La demo no está disponible en este momento. Vuelve a intentarlo más tarde.",
     "questionsLeft_one": "Te queda {{count}} pregunta hoy.",
@@ -190,6 +190,8 @@
     "ctaTitle": "¿Lo quieres con los documentos de tu empresa?",
     "ctaText": "Cada empresa tiene su espacio privado, sus usuarios y su especialidad. Como servicio o instalado en tus servidores.",
     "ctaButton": "Hablemos",
-    "loginLink": "¿No tienes cuenta? Prueba la demo"
+    "loginLink": "¿No tienes cuenta? Prueba la demo",
+    "howTo": "Aquí ya tienes cargado un documento real. Elige una pregunta sugerida o escribe la tuya: la respuesta sale solo del documento y, si no está, te lo dice. No hace falta cuenta.",
+    "suggestionsTitle": "Prueba con una de estas preguntas:"
   }
 }

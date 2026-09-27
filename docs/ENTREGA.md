@@ -163,7 +163,8 @@ Cualquiera puede probar el asistente sin cuenta en `https://<tu-app>/demo`: ve e
 1. Aplica `supabase/migrations/004_demo.sql` en el SQL Editor. Crea la empresa **Demo** (`slug demo`, especialidad eléctrica) marcada como demo.
 2. La función `demo-chat` se despliega sola con la acción "Desplegar Edge Functions" al hacer merge en `main`, sin verificación de JWT.
 3. Entra en la app como superadmin, cambia a la empresa **Demo** y sube el PDF de ejemplo. Debe ser público o tuyo, sin datos de clientes. Cambia la especialidad de la empresa si el documento no es eléctrico.
-4. Abre `/demo`: se usa el último documento listo de la empresa Demo. Para cambiarlo, sube otro (o borra el anterior).
+4. Aplica `supabase/migrations/005_demo_content.sql`: guarda el título legible del documento y las preguntas sugeridas (en español e inglés) en `organizations.demo_content`. Viene preparado para el documento de ejemplo actual (Endesa NRZ102).
+5. Abre `/demo`: se usa el último documento listo de la empresa Demo. Para cambiarlo, sube otro (o borra el anterior) y actualiza `demo_content` con un `UPDATE` como el de la migración 005.
 
 En Vercel, `vercel.json` hace que `/demo` cargue la app. En Nginx (Docker) ya funciona, pero la instalación en una empresa no necesita demo.
 
