@@ -4,7 +4,9 @@ import { currentLanguage } from '../i18n';
 /** Estado de la demo pública: documento de ejemplo y preguntas que le quedan al visitante. */
 export interface DemoInfo {
   available: boolean;
-  document?: { name: string; summary: string };
+  document?: { name: string; title: string; summary: string };
+  /** Preguntas sugeridas para empezar, en el idioma de la interfaz. */
+  suggestions?: string[];
   questionsLeft?: number;
   limit?: number;
 }

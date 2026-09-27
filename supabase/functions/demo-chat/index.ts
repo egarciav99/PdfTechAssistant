@@ -20,7 +20,7 @@ async function visitorKey(req: Request): Promise<string> {
 
 /** Documento de la demo: el último documento listo de una empresa demo. */
 async function demoDocument(admin: any) {
-  const { data: orgs } = await admin.from('organizations').select('id, name, specialty, assistant_instructions').eq('is_demo', true);
+  const { data: orgs } = await admin.from('organizations').select('id, name, specialty, assistant_instructions, demo_content').eq('is_demo', true);
   if (!orgs?.length) return null;
   const { data: doc } = await admin.from('user_documents')
     .select('id, org_id, original_name')
@@ -59,7 +59,13 @@ Deno.serve(async (req: Request) => {
 
     if (action === 'info') {
       const { data: left } = await admin.rpc('demo_questions_left', { p_visitor: visitor, p_limit: PER_VISITOR });
-      return json(req, { available: true, document: { name: doc.name, summary: doc.summary }, questionsLeft: left ?? PER_VISITOR, limit: PER_VISITOR });
+      // Título legible y preguntas sugeridas (organizations.demo_content), en el idioma de la interfaz.
+      const content = doc.org?.demo_content || {};
+      const title = typeof content.title?.[lang] === 'string' ? content.title[lang] : doc.name;
+      const suggestions = Array.isArray(content.suggestions?.[lang])
+        ? content.suggestions[lang].filter((q: unknown) => typeof q === 'string').slice(0, 6)
+        : [];
+      return json(req, { available: true, document: { name: doc.name, title, summary: doc.summary }, suggestions, questionsLeft: left ?? PER_VISITOR, limit: PER_VISITOR });
     }
 
     if (!query) return json(req, { error: 'query is required' }, 400);
