@@ -14,9 +14,12 @@ import { MembersPanel } from './components/admin/MembersPanel';
 import { OrgsPanel } from './components/admin/OrgsPanel';
 import { BuildingIcon, FileTextIcon, LogOutIcon, UsersIcon } from './components/IconComponents';
 import CreatedBy from './components/CreatedBy';
+import DemoPage from './components/DemoPage';
 
 const App: React.FC = () => {
   if (!isConfigured()) return <NotConfiguredScreen />;
+  // Demo pública sin login.
+  if (window.location.pathname.replace(/\/+$/, '') === '/demo') return <DemoPage />;
   return <AuthenticatedApp />;
 };
 

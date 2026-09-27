@@ -4,11 +4,16 @@
 set -e
 TARGET=/usr/share/nginx/html/config.json
 
-if [ -z "${SUPABASE_URL}${SUPABASE_ANON_KEY}${COMPANY_NAME}${LOGO_URL}${DEFAULT_LANGUAGE}" ]; then
+if [ -z "${SUPABASE_URL}${SUPABASE_ANON_KEY}${COMPANY_NAME}${LOGO_URL}${DEFAULT_LANGUAGE}${DEMO}" ]; then
   exit 0
 fi
 
 json_escape() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
+
+case "${DEMO:-false}" in
+  true) DEMO_VALUE=true ;;
+  *) DEMO_VALUE=false ;;
+esac
 
 case "${DEFAULT_LANGUAGE:-es}" in
   en) LANG_VALUE=en ;;
@@ -20,6 +25,7 @@ cat > "$TARGET" <<JSON
   "companyName": "$(json_escape "${COMPANY_NAME:-}")",
   "logoUrl": "$(json_escape "${LOGO_URL:-}")",
   "defaultLanguage": "${LANG_VALUE}",
+  "demo": ${DEMO_VALUE},
   "supabase": {
     "url": "$(json_escape "${SUPABASE_URL:-}")",
     "anonKey": "$(json_escape "${SUPABASE_ANON_KEY:-}")"

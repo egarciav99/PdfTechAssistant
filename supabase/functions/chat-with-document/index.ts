@@ -1,23 +1,7 @@
 /// <reference path="../types.d.ts" />
 import { authenticate, corsHeaders, json, toLang, UUID_RE, type Lang } from '../_shared/common.ts';
-import { generateContent, generateEmbedding } from '../_shared/gemini.ts';
-import { buildSystemPrompt, DOCUMENT_NOT_READY_HTML, NO_RESULTS_HTML } from '../_shared/prompts.ts';
-
-const tool = {
-  functionDeclarations: [{
-    name: 'search_document_chunks',
-    description: 'Busca evidencia únicamente dentro del documento activo.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        query: { type: 'STRING', description: 'Consulta específica o amplia para recuperar evidencia.' },
-        documentId: { type: 'STRING', description: 'UUID exacto del documento activo.' },
-        limit: { type: 'INTEGER', description: 'Cantidad de fragmentos, entre 1 y 8.' },
-      },
-      required: ['query', 'documentId'],
-    },
-  }],
-};
+import { buildSystemPrompt, DOCUMENT_NOT_READY_HTML } from '../_shared/prompts.ts';
+import { answerFromDocument, type ChunkMatch } from '../_shared/rag.ts';
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(req) });
@@ -69,46 +53,19 @@ Deno.serve(async (req: Request) => {
     }
 
     const { data: history } = await client.from('chat_messages').select('role, content').eq('session_id', sessionId).order('created_at', { ascending: false }).limit(10);
-    const contents: any[] = (history || []).reverse().map((message: { role: string; content: string }) => ({ role: message.role === 'assistant' ? 'model' : 'user', parts: [{ text: message.content }] }));
-    contents.push({ role: 'user', parts: [{ text: `Documento activo: ${documentId}\nConsulta: ${query}\nDebes usar la herramienta antes de responder.` }] });
-
-    let result = await generateContent(systemPrompt, contents, [tool]);
-    let foundResultsInRequest = false;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const parts = result.candidates?.[0]?.content?.parts || [];
-      const calls = parts.filter((part: any) => part.functionCall);
-      if (!calls.length) break;
-      const functionParts = [];
-      let foundResultsInTurn = false;
-      for (const part of calls) {
-        const args = part.functionCall.args || {};
-        const searchText = typeof args.query === 'string' && args.query.trim() ? args.query : query;
-        const vector = await generateEmbedding(searchText);
-        const limit = Math.min(Math.max(Number(args.limit) || 4, 1), 8);
-        // Siempre el documento activo: se ignora el documentId que proponga el modelo.
-        const { data: matches, error: matchError } = await client.rpc('match_document_chunks', { query_embedding: vector, requested_document_id: documentId, match_threshold: 0.45, match_count: limit });
+    const html = await answerFromDocument({
+      systemPrompt,
+      history: (history || []).reverse(),
+      documentId,
+      query,
+      lang,
+      // RLS del usuario: match_document_chunks solo devuelve fragmentos de sus empresas.
+      search: async (embedding, limit) => {
+        const { data: matches, error: matchError } = await client.rpc('match_document_chunks', { query_embedding: embedding, requested_document_id: documentId, match_threshold: 0.45, match_count: limit });
         if (matchError) throw matchError;
-        if (matches?.length) {
-          foundResultsInTurn = true;
-          foundResultsInRequest = true;
-        }
-        const dataResults = (matches || []).map((match: { content: string; metadata: unknown; similarity: number }) => ({
-          ...match,
-          content: `<<<BEGIN RETRIEVED DATA>>>\n${match.content}\n<<<END RETRIEVED DATA>>>`,
-        }));
-        functionParts.push({ functionResponse: { name: 'search_document_chunks', response: { documentId, results: dataResults } } });
-      }
-      contents.push({ role: 'model', parts });
-      contents.push({ role: 'user', parts: functionParts });
-      result = await generateContent(systemPrompt, contents, [tool]);
-
-      if (!foundResultsInTurn && !foundResultsInRequest) {
-        return json(req, { output: NO_RESULTS_HTML[lang], sessionId });
-      }
-    }
-
-    const output = result.candidates?.[0]?.content?.parts?.map((part: any) => part.text || '').join('').trim() || NO_RESULTS_HTML[lang];
-    const html = output.startsWith('<div') ? output : NO_RESULTS_HTML[lang];
+        return (matches || []) as ChunkMatch[];
+      },
+    });
     await client.from('chat_messages').insert([
       { session_id: sessionId, user_id: user.id, role: 'user', content: query },
       { session_id: sessionId, user_id: user.id, role: 'assistant', content: html },

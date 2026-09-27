@@ -173,5 +173,23 @@
     "invalid_request": "Invalid request.",
     "server_error": "The action could not be completed. Please try again.",
     "generic": "Something went wrong."
+  },
+  "demo": {
+    "badge": "Demo",
+    "title": "Try the assistant with a real document",
+    "intro": "This technical document is already loaded. Ask it questions: the assistant answers only with what the document says and tells you when it cannot find something. No account needed.",
+    "document": "Sample document",
+    "unavailable": "The demo is not available right now. Please try again later.",
+    "questionsLeft_one": "You have {{count}} question left today.",
+    "questionsLeft_other": "You have {{count}} questions left today.",
+    "noQuestionsLeft": "You have used today's questions. Come back tomorrow or contact us for a trial with your documents.",
+    "limitReached": "You have used today's demo questions. Come back tomorrow or contact us for a trial with your company's documents.",
+    "busy": "The demo has had many visitors today and reached its daily limit. Please come back tomorrow.",
+    "tooLong": "The question is too long. Please keep it under 500 characters.",
+    "error": "Could not get an answer. Please try again in a few seconds.",
+    "ctaTitle": "Want it with your company's documents?",
+    "ctaText": "Each company gets its own private space, users and specialty. As a service or installed on your servers.",
+    "ctaButton": "Let's talk",
+    "loginLink": "No account? Try the demo"
   }
 }

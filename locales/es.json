@@ -173,5 +173,23 @@
     "invalid_request": "Petición no válida.",
     "server_error": "No se pudo completar la acción. Inténtalo de nuevo.",
     "generic": "Ha ocurrido un error."
+  },
+  "demo": {
+    "badge": "Demo",
+    "title": "Prueba el asistente con un documento real",
+    "intro": "Este documento técnico ya está cargado. Hazle preguntas: el asistente responde solo con lo que dice el documento y, si no lo encuentra, te lo dice. No hace falta cuenta.",
+    "document": "Documento de ejemplo",
+    "unavailable": "La demo no está disponible en este momento. Vuelve a intentarlo más tarde.",
+    "questionsLeft_one": "Te queda {{count}} pregunta hoy.",
+    "questionsLeft_other": "Te quedan {{count}} preguntas hoy.",
+    "noQuestionsLeft": "Ya usaste las preguntas de hoy. Vuelve mañana o escríbenos para una prueba con tus documentos.",
+    "limitReached": "Ya usaste las preguntas de hoy en la demo. Vuelve mañana o escríbenos para una prueba con los documentos de tu empresa.",
+    "busy": "La demo ha tenido muchas visitas hoy y ha llegado a su límite diario. Vuelve mañana.",
+    "tooLong": "La pregunta es demasiado larga. Resúmela en menos de 500 caracteres.",
+    "error": "No se pudo obtener respuesta. Inténtalo de nuevo en unos segundos.",
+    "ctaTitle": "¿Lo quieres con los documentos de tu empresa?",
+    "ctaText": "Cada empresa tiene su espacio privado, sus usuarios y su especialidad. Como servicio o instalado en tus servidores.",
+    "ctaButton": "Hablemos",
+    "loginLink": "¿No tienes cuenta? Prueba la demo"
   }
 }

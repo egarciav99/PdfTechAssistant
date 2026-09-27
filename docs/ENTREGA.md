@@ -137,13 +137,35 @@ Para empresas que no pueden sacar sus documentos de su red. Se usa el mismo cód
   "companyName": "",
   "logoUrl": "",
   "defaultLanguage": "es",
+  "demo": false,
   "supabase": { "url": "", "anonKey": "" }
 }
 ```
 
 - Lo que falte o venga vacío se toma de las variables `VITE_*` del build.
 - `defaultLanguage` se usa cuando el navegador no está en español ni en inglés y la persona todavía no ha elegido idioma.
-- Sin `supabase.url` y `anonKey` la app no arranca (no hay modo demo).
+- `demo` enseña en la pantalla de acceso el enlace a la demo pública. Solo tiene sentido en el SaaS (ver abajo). En Docker se activa con `DEMO=true`.
+- Sin `supabase.url` y `anonKey` la app no arranca.
+
+---
+
+## Demo pública (`/demo`, solo SaaS)
+
+Cualquiera puede probar el asistente sin cuenta en `https://<tu-app>/demo`: ve el resumen de un documento de ejemplo y puede hacerle preguntas.
+
+**Cómo está protegida**
+- La función `demo-chat` no pide login, pero solo lee documentos de empresas con `is_demo = true`, a través de `match_demo_chunks`, que solo puede llamar el service role. Nunca toca los documentos de otras empresas.
+- `is_demo` solo se cambia por SQL: ni los admins ni el superadmin pueden activarlo desde la app.
+- Límite de preguntas: 5 por visitante y día y 300 en total al día (variables `DEMO_DAILY_LIMIT` y `DEMO_GLOBAL_DAILY_LIMIT` de la función). Del visitante solo se guarda un hash de su IP, que se borra al día siguiente.
+- La demo no guarda las preguntas ni las respuestas.
+
+**Activarla**
+1. Aplica `supabase/migrations/004_demo.sql` en el SQL Editor. Crea la empresa **Demo** (`slug demo`, especialidad eléctrica) marcada como demo.
+2. La función `demo-chat` se despliega sola con la acción "Desplegar Edge Functions" al hacer merge en `main`, sin verificación de JWT.
+3. Entra en la app como superadmin, cambia a la empresa **Demo** y sube el PDF de ejemplo. Debe ser público o tuyo, sin datos de clientes. Cambia la especialidad de la empresa si el documento no es eléctrico.
+4. Abre `/demo`: se usa el último documento listo de la empresa Demo. Para cambiarlo, sube otro (o borra el anterior).
+
+En Vercel, `vercel.json` hace que `/demo` cargue la app. En Nginx (Docker) ya funciona, pero la instalación en una empresa no necesita demo.
 
 ---
 
