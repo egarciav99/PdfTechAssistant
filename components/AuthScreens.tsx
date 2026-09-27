@@ -91,6 +91,11 @@ export function LoginScreen() {
           {forgot ? t('auth.backToSignIn') : t('auth.forgot')}
         </button>
         <p className="mt-4 text-[11px] text-gray-400 text-center">{t('auth.inviteOnly')}</p>
+        {getConfig().demo && (
+          <a href="/demo" className="block mt-3 text-center text-xs font-semibold text-blue-700 hover:underline" id="link-demo">
+            {t('demo.loginLink')}
+          </a>
+        )}
       </form>
     </AuthLayout>
   );

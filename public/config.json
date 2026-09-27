@@ -2,5 +2,6 @@
   "companyName": "",
   "logoUrl": "",
   "defaultLanguage": "es",
+  "demo": true,
   "supabase": { "url": "", "anonKey": "" }
 }

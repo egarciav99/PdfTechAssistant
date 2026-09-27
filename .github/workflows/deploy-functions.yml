@@ -66,6 +66,9 @@ jobs:
             echo "Desplegando $fn..."
             supabase functions deploy "$fn" --project-ref "$PROJECT_REF" --use-api
           done
+          # La demo pública se llama sin login: sin verificación de JWT.
+          echo "Desplegando demo-chat..."
+          supabase functions deploy demo-chat --project-ref "$PROJECT_REF" --use-api --no-verify-jwt
 
       - name: Resultado
         run: supabase functions list --project-ref "$PROJECT_REF"

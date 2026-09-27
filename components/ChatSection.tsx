@@ -11,9 +11,11 @@ interface ChatSectionProps {
   onSendMessage: (query: string) => void;
   onNewChat?: () => void;
   isLoading?: boolean;
+  /** Texto bajo el título; por defecto, el aviso de que la conversación es privada. */
+  note?: string;
 }
 
-const ChatSection: React.FC<ChatSectionProps> = ({ documentId, messages, onSendMessage, onNewChat, isLoading = false }) => {
+const ChatSection: React.FC<ChatSectionProps> = ({ documentId, messages, onSendMessage, onNewChat, isLoading = false, note }) => {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -40,7 +42,7 @@ const ChatSection: React.FC<ChatSectionProps> = ({ documentId, messages, onSendM
           <button type="button" onClick={onNewChat} className="text-xs font-semibold text-blue-700 hover:underline">{t('chat.newChat')}</button>
         )}
       </div>
-      <p className="text-xs text-gray-400 mb-2">{t('chat.private')}</p>
+      <p className="text-xs text-gray-400 mb-2">{note ?? t('chat.private')}</p>
       <div className="bg-gray-50 p-2 sm:p-4 rounded-lg shadow-inner h-[60vh] sm:h-96 flex flex-col border border-gray-200">
         <div ref={chatContainerRef} id="chat-messages" aria-live="polite" className="flex-grow space-y-3 sm:space-y-4 overflow-y-auto px-1 sm:pr-2 scrollbar-thin scrollbar-thumb-gray-300">
           {messages.map((msg, index) => (

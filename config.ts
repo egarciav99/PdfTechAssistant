@@ -10,6 +10,8 @@ export interface AppConfig {
   logoUrl: string;
   /** Idioma inicial si el navegador no ha elegido otro: 'es' o 'en'. */
   defaultLanguage: 'es' | 'en';
+  /** Enseña el enlace a la demo pública (/demo) en la pantalla de acceso. Solo en el SaaS. */
+  demo: boolean;
   supabase: { url: string; anonKey: string };
 }
 
@@ -19,6 +21,7 @@ const fromEnv: AppConfig = {
   companyName: env.VITE_COMPANY_NAME || '',
   logoUrl: env.VITE_LOGO_URL || '',
   defaultLanguage: env.VITE_DEFAULT_LANGUAGE === 'en' ? 'en' : 'es',
+  demo: env.VITE_DEMO === 'true',
   supabase: {
     url: env.VITE_SUPABASE_URL || '',
     anonKey: env.VITE_SUPABASE_ANON_KEY || '',
@@ -40,6 +43,7 @@ export async function loadConfig(): Promise<AppConfig> {
         companyName: file.companyName || fromEnv.companyName,
         logoUrl: file.logoUrl || fromEnv.logoUrl,
         defaultLanguage: file.defaultLanguage === 'en' || file.defaultLanguage === 'es' ? file.defaultLanguage : fromEnv.defaultLanguage,
+        demo: typeof file.demo === 'boolean' ? file.demo : fromEnv.demo,
         supabase: {
           url: file.supabase?.url || fromEnv.supabase.url,
           anonKey: file.supabase?.anonKey || fromEnv.supabase.anonKey,

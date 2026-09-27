@@ -5,6 +5,7 @@ Asistente multiempresa para documentación técnica: cada empresa sube sus PDF, 
 - **Roles:** superadmin (crea empresas y entra en cualquiera), admin de empresa (documentos, usuarios, nombre, logo y especialidad) y usuario (sube y consulta; sus chats son privados).
 - **Acceso:** solo por invitación.
 - **Entrega:** como SaaS o instalado en la empresa con Docker. Ver **[docs/ENTREGA.md](docs/ENTREGA.md)**.
+- **Demo pública:** `/demo` permite probarlo sin cuenta con un documento de ejemplo y un límite de preguntas diario. Ver [docs/ENTREGA.md → Demo pública](docs/ENTREGA.md#demo-pública-demo-solo-saas).
 
 ## Arquitectura
 
@@ -32,6 +33,7 @@ npx supabase secrets set GEMINI_API_KEY=<GEMINI_KEY>
 npx supabase functions deploy process-document
 npx supabase functions deploy chat-with-document
 npx supabase functions deploy manage-members
+npx supabase functions deploy demo-chat --no-verify-jwt
 ```
 
 Crea `.env.local`:
