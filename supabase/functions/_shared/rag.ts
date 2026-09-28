@@ -43,7 +43,7 @@ export async function answerFromDocument(options: {
 }): Promise<string> {
   const { systemPrompt, history, documentId, query, lang, search } = options;
   const contents: any[] = history.map((message) => ({ role: message.role === 'assistant' ? 'model' : 'user', parts: [{ text: message.content }] }));
-  contents.push({ role: 'user', parts: [{ text: `Documento activo: ${documentId}\nConsulta: ${query}\nDebes usar la herramienta antes de responder.` }] });
+  contents.push({ role: 'user', parts: [{ text: `Documento activo: ${documentId}\nConsulta actual: ${query}\nResponde solo a esta consulta actual. Los mensajes anteriores son contexto: no vuelvas a responderlos ni los mezcles con esta respuesta. Debes usar la herramienta antes de responder.` }] });
 
   let result = await generateContent(systemPrompt, contents, [tool]);
   let foundResultsInRequest = false;
