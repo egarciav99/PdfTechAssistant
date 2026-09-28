@@ -55,3 +55,16 @@ jobs:
     
     - name: Check TypeScript
       run: npx tsc --noEmit
+
+  functions:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Instalar Deno
+      uses: denoland/setup-deno@v2
+      with:
+        deno-version: v2.x
+
+    - name: Tests de anonimización
+      run: deno test --no-check supabase/functions/_shared/redaction.test.ts

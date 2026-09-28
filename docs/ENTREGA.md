@@ -24,7 +24,11 @@ Navegador (React)  ──►  Supabase (login, empresas, roles, Storage, pgvecto
   - pgvector para la búsqueda en los documentos;
   - las tres Edge Functions.
 - **Gemini:** solo lo llaman las Edge Functions. La clave nunca llega al navegador.
-- **Privacidad:** antes de indexar un PDF o enviarlo al modelo se anonimizan los datos personales (correos, teléfonos, RFC, direcciones, importes, nombres etiquetados). Lo hace `supabase/functions/_shared/redaction.ts`.
+- **Privacidad:** antes de indexar un PDF o enviarlo al modelo se anonimizan los datos personales de España y México: correos, teléfonos, DNI, NIE y CIF (con su control verificado), RFC, IBAN, direcciones, importes y nombres con etiqueta. Lo hace `supabase/functions/_shared/redaction.ts`.
+  - Los teléfonos solo se reconocen con contexto claro (etiqueta como "Tel.", prefijo internacional o formato inequívoco), para no borrar valores de tablas técnicas.
+  - No se anonimiza el nombre de la empresa que emite el documento: forma parte del contenido técnico.
+  - Pruebas: `deno test --no-check supabase/functions/_shared/redaction.test.ts` (también en la CI).
+  - Los documentos subidos antes de un cambio en estas reglas se quedan como se indexaron; para aplicar las reglas nuevas, vuelve a subirlos.
 
 ## Roles
 
