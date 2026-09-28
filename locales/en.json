@@ -105,7 +105,9 @@
     "fetching": "Loading the summary...",
     "notReady": "The summary is not ready yet.",
     "notReadyHint": "The document is still being processed or it failed.",
-    "uploadedAt": "Uploaded: {{date}}"
+    "uploadedAt": "Uploaded: {{date}}",
+    "showMore": "Show full summary",
+    "showLess": "Show less"
   },
   "chat": {
     "title": "Ask the document",

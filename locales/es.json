@@ -105,7 +105,9 @@
     "fetching": "Cargando el resumen...",
     "notReady": "El resumen todavía no está listo.",
     "notReadyHint": "El documento se está procesando o terminó con error.",
-    "uploadedAt": "Subido: {{date}}"
+    "uploadedAt": "Subido: {{date}}",
+    "showMore": "Ver resumen completo",
+    "showLess": "Ver menos"
   },
   "chat": {
     "title": "Pregunta al documento",

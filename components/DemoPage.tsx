@@ -85,7 +85,7 @@ const DemoPage: React.FC = () => {
             <p className="text-sm text-gray-500">
               {t('demo.document')}: <strong className="text-gray-700">{info.document.title || info.document.name}</strong>
             </p>
-            {info.document.summary && <SummarySection summary={{ resumen: info.document.summary }} />}
+            {info.document.summary && <SummarySection summary={{ resumen: info.document.summary }} collapsible />}
             {left > 0 && (info.suggestions ?? []).some((q) => !asked.includes(q)) && (
               <div>
                 <p className="text-sm font-semibold text-gray-700 mb-2">{t('demo.suggestionsTitle')}</p>
