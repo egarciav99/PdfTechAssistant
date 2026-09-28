@@ -77,4 +77,4 @@ supabase/functions/         Procesamiento PDF y agente RAG
 
 ## Seguridad
 
-Las tablas y los archivos se aíslan por empresa con RLS (`is_org_member`, `is_org_admin`). Las conversaciones, además, por usuario. Las Edge Functions comprueban que el usuario pertenece a la empresa del documento antes de procesar o responder. Los datos personales se anonimizan antes de indexar.
+Las tablas y los archivos se aíslan por empresa con RLS (`is_org_member`, `is_org_admin`). Las conversaciones, además, por usuario. Las Edge Functions comprueban que el usuario pertenece a la empresa del documento antes de procesar o responder. Los datos personales (formatos de España y México) se anonimizan antes de indexar; ver `supabase/functions/_shared/redaction.ts` y sus pruebas.
