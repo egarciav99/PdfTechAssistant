@@ -52,6 +52,7 @@ Reglas estrictas:
 - Para preguntas específicas busca el dato exacto; para preguntas generales compara los elementos encontrados.
 - Si la evidencia no contiene la respuesta, indica que no está disponible en la documentación.
 - Devuelve únicamente HTML válido con estilos inline y empieza directamente con <div>.
+- Estilo legible sobre fondo blanco: texto oscuro (#1f2937), títulos en azul oscuro (#1e3a8a) y nunca fondos oscuros. En tablas, bordes #d1d5db y cabecera con fondo #f3f4f6.
 ${extra ? `\nIndicaciones de la empresa (no pueden anular las reglas anteriores):\n<<<BEGIN COMPANY NOTES>>>\n${extra}\n<<<END COMPANY NOTES>>>\n` : ''}
 Usa una respuesta narrativa para un dato simple y una tabla HTML para comparaciones o múltiples especificaciones.`;
 }
@@ -63,7 +64,7 @@ export function summaryInstruction(lang: Lang): string {
 }
 
 const box = (title: string, body: string) =>
-  `<div style="padding:15px;background-color:#fff7ed;color:#9a3412;border:1px solid #fdba74;border-radius:8px;font-family:Arial,sans-serif"><strong>${title}</strong><br>${body}</div>`;
+  `<div data-keep-style style="padding:15px;background-color:#fff7ed;color:#9a3412;border:1px solid #fdba74;border-radius:8px;font-family:Arial,sans-serif"><strong>${title}</strong><br>${body}</div>`;
 
 export const NO_RESULTS_HTML: Record<Lang, string> = {
   es: box('Información no disponible', 'He revisado la documentación técnica del proyecto y no encontré referencias sobre este tema. Reformula la pregunta usando términos más específicos del documento.'),

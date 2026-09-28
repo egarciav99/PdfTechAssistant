@@ -1,6 +1,6 @@
 
 import React from 'react';
-import DOMPurify from 'dompurify';
+import { cleanModelHtml } from '../services/modelHtml';
 import { useTranslation } from 'react-i18next';
 import type { SummaryData } from '../types';
 import { ClipboardListIcon } from './IconComponents';
@@ -22,7 +22,7 @@ const SummarySection: React.FC<SummarySectionProps> = ({ summary }) => {
           <div key={key} className="p-3 sm:p-4 bg-white rounded-md shadow-sm overflow-hidden text-sm sm:text-base text-gray-700">
             <div
               className="prose prose-sm max-w-none text-gray-700 break-words overflow-x-auto"
-              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(value) }}
+              dangerouslySetInnerHTML={{ __html: cleanModelHtml(value) }}
             />
           </div>
         ))}
