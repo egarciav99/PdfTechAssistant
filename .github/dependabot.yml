@@ -1,0 +1,27 @@
+# Actualizaciones automáticas: Dependabot abre un PR cada lunes con las librerías que tienen versión nueva.
+# Las actualizaciones pequeñas (minor y patch) van juntas en un solo PR; las grandes (major), cada una en el suyo.
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "Europe/Madrid"
+    open-pull-requests-limit: 5
+    groups:
+      menores:
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: "Dependencias"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      timezone: "Europe/Madrid"
+    groups:
+      acciones:
+        patterns: ["*"]
+    commit-message:
+      prefix: "Acciones"
